@@ -1,0 +1,65 @@
+Description: Bastion hosts and Security Group
+
+Parameters:
+  Environment:
+    Type: String
+  VPCID:
+    Type: AWS::EC2::VPC::Id
+  BastionAMI:
+    Type: String
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet::Id
+  KeyPair:
+    Type: String
+
+Resources:
+  BastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: bastion Security group
+      GroupName: !Sub ${Environment}-Bastion-SG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 111.93.108.202/32
+          Description: QB TVM IP
+          FromPort: 22
+          ToPort: 22
+        - IpProtocol: tcp
+          CidrIp: 103.121.27.170/32
+          Description: QB TVM IP
+          FromPort: 22
+          ToPort: 22
+        - IpProtocol: tcp
+          CidrIp: 122.15.225.249/32
+          Description: QB TVM IP
+          FromPort: 22
+          ToPort: 22
+        - IpProtocol: tcp
+          CidrIp: 122.15.225.249/32
+          Description: QB TVM IP
+          FromPort: 22
+          ToPort: 22
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-Bastion-SG
+      VpcId: !Ref VPC
+
+  #Bastion Host
+  Bastionhost:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref 'BastionAMI'
+      InstanceType: t2.micro
+      KeyName: !Ref 'KeyPair'
+      SecurityGroupIds:
+        - !Ref 'BastionSecurityGroup'
+      SubnetId: !Ref 'PublicSubnet1'
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-Bastion-Host
+      BlockDeviceMappings:
+        - DeviceName: "/dev/xvda"
+          Ebs:
+            VolumeType: "gp2"
+            DeleteOnTermination: "true"
+            VolumeSize: "20"

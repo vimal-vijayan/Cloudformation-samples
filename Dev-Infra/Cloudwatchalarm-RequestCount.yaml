@@ -1,0 +1,43 @@
+Description: Cloudwatch alarm
+
+
+Parameters:
+  ScaleUpPolicy: #ARN of scaling up policy
+  Type: String
+  ScaleDownPolicy: #Arn of scale in policy
+  Type: String
+  TargetGroupARN:
+  Type: String
+
+Resources:
+
+  Alarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+         - Ref 'ScaleUpPolicy'
+      AlarmDescription: Alarm when High request count to individual targets
+      AlarmName: HighRequestToTarget
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref 'ASGName'
+        - Name: TargetGroupName
+          Value: !Ref 'TargetGroupARN'
+      EvaluationPeriods: 2
+      Namespace: 'AWS/ApplicationELB'
+      MetricName: RequestCount
+      # Metrics:
+      #   - Expression: String
+      #     Id: String
+      #     Label: String
+      #     MetricStat:
+      #       MetricStat
+      #     ReturnData: Boolean
+      OKActions:
+        - Ref 'ScaleDownPolicy'
+      Period: 60
+      Threshold: 2000
+      Unit: Count

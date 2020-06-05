@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Cloufront Distribution Stack
+Parameters:
+  StaticBucket:
+    Type: String
+    Default: sample-bucket-for-vimal
+  ALBDNS:
+    Type: String
+    Default: Demo-Dev-ALB-1146799061.us-east-1.elb.amazonaws.com
+  DomainName:
+    Type: String
+    Default: sample.com
+  BucketDNS:
+    Type: String
+    Default: sample-bucket-for-vimal.s3.amazonaws.com
+
+Resources:
+
+  TheCloudFrontOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub 'CloudFront OAI for ${DomainName}'
+
+  cloudfrontdistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+          # Aliases:
+          #   - Ref 'DomainName'
+          CacheBehaviors:
+            - AllowedMethods:
+                - GET
+                - HEAD
+                - OPTIONS
+              CachedMethods:
+                - GET
+                - HEAD
+              Compress: true
+              ForwardedValues:
+                QueryString: false
+                # Cookies:
+                #   Forward: none
+              # LambdaFunctionAssociations:
+              #   - LambdaFunctionAssociation
+              # MaxTTL: Double
+              # MinTTL: Double
+              PathPattern: "*"
+              TargetOriginId: thes3orgin
+              ViewerProtocolPolicy: allow-all #redirect-to-https
+            - AllowedMethods:
+                - GET
+                - HEAD
+                - OPTIONS
+              CachedMethods:
+                - GET
+                - HEAD
+              Compress: true
+              ForwardedValues:
+                QueryString: false
+                # Cookies:
+                #   Forward: none
+              # LambdaFunctionAssociations:
+              #   - LambdaFunctionAssociation
+              # MaxTTL: Double
+              # MinTTL: Double
+              PathPattern: /
+              TargetOriginId: AlbOrigin
+              ViewerProtocolPolicy: allow-all #redirect-to-https
+
+          Comment: Cloudfront Distribution for <client>
+          # CustomErrorResponses:
+          #   - CustomErrorResponse
+          DefaultCacheBehavior:
+            Compress: true
+            ForwardedValues:
+              QueryString: false
+            TargetOriginId: thes3orgin
+            ViewerProtocolPolicy: allow-all
+          DefaultRootObject: index.html
+          Enabled: true
+          # HttpVersion: String
+          IPV6Enabled: true
+          # Logging:
+          #   IncludeCookies: false
+          #   Bucket: <Bucket Name>
+          #   Prefix: CDN
+          # OriginGroups:
+          #   OriginGroups
+          Origins:
+            - DomainName: !Ref 'BucketDNS'
+              Id: thes3orgin
+              S3OriginConfig:
+                OriginAccessIdentity: !Join [ "", [ "origin-access-identity/cloudfront/", !Ref TheCloudFrontOriginAccessIdentity ] ]
+            - DomainName: !Ref 'ALBDNS'
+              Id: AlbOrigin
+              CustomOriginConfig:
+                OriginProtocolPolicy: match-viewer
+          # PriceClass: String
+          # Restrictions:
+          #   Restrictions
+          # ViewerCertificate:
+          #   AcmCertificateArn: <acm certificate arn>
+          #   MinimumProtocolVersion: TLSv1.2_2018
+          #   SslSupportMethod: sni-only
+          # WebACLId: String
+      Tags:
+        - Key: Name
+          Value: CDN
+
+  TheBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref 'StaticBucket'
+      PolicyDocument:
+        Statement:
+          -
+            Action:
+              - s3:GetObject
+            Effect: Allow
+            Resource: !Join [ "", [ "arn:aws:s3:::", !Ref StaticBucket, "/*" ] ]
+            Principal:
+              CanonicalUser: !GetAtt TheCloudFrontOriginAccessIdentity.S3CanonicalUserId
+
+
+Outputs:
+  CDNID:
+    Description: CloudFront Distribution ID
+    Value: !Ref 'cloudfrontdistribution'
+    Export:
+      Name: CDNID
+  DomainName:
+    Description: CDN Domain Name
+    Value: !GetAtt 'cloudfrontdistribution.DomainName'
+    Export:
+      Name: DomainName

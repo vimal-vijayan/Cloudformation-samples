@@ -1,0 +1,330 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This stack creates basic infrastructure, Including VPC,Subnets(Private and Public), IGW, NAT Gateway, Default Server Security Groups.
+
+Parameters:
+  Project:
+    Type: String
+    Description: Enter Project Name
+  Environment:
+    Type: String
+    Description: "Please specify the Environment"
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - Stage
+      - Prod
+  VpcName:
+    Type: String
+    Description: "Enter VPC Name"
+    Default:  Dev-VPC
+  VpcCidr:
+    Type: String
+    Description: "Enter VPC CIDR"
+    Default: 10.0.0.0/16
+  PublicSubnet1Cidr:
+    Type: String
+    Description: "Enter Public Subnet1 CIDR"
+    Default: 10.0.0.0/24
+  PublicSubnet2Cidr:
+    Type: String
+    Description: "Enter Public Subnet2 CIDR"
+    Default: 10.0.1.0/24
+  PrivateSubnet1Cidr:
+    Type: String
+    Description: "Enter Private Subnet1 CIDR"
+    Default: 10.0.2.0/24
+  PrivateSubnet2Cidr:
+    Type: String
+    Description: "Enter Private Subnet2 CIDR"
+    Default: 10.0.3.0/24
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Network Configuration"
+        Parameters:
+          - Project
+          - Environment
+          - VpcName
+          - VpcCidr
+          - PublicSubnet1Cidr
+          - PublicSubnet2Cidr
+          - PrivateSubnet1Cidr
+          - PrivateSubnet2Cidr
+          - LoadBalancerCertificateArn
+
+
+Resources:
+
+# New VPC
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref 'VpcCidr'
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Environment
+          Value: !Ref 'Environment'
+        - Key: Name
+          Value: !Join ["-",[!Ref 'Environment', !Ref 'Project', "VPC"]]
+
+# VPC to use amazon provided ipv6 Cidr
+  VPCv6: #Request an IPv6 block for the VPC
+    Type: "AWS::EC2::VPCCidrBlock"
+    DependsOn: VPC
+    Properties:
+      AmazonProvidedIpv6CidrBlock: true
+      VpcId: !Ref 'VPC'
+
+
+#Subnets Creation
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPCv6
+    Properties:
+     #AvailabilityZone: "us-east-1a"
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      #AssignIpv6AddressOnCreation: trueGrititsafety
+      CidrBlock: !Ref 'PublicSubnet1Cidr'
+      Ipv6CidrBlock: !Select [0, !Cidr [!Select [0, !GetAtt 'VPC.Ipv6CidrBlocks'], 256, 64]]
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: !Join ["-",[!Ref 'Environment', !Ref "Project", "PublicSubnet1"]]
+        - Key: Environment
+          Value: !Ref 'Environment'
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPCv6
+    Properties:
+     #AvailabilityZone: "us-east-1b"
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      CidrBlock: !Ref 'PublicSubnet2Cidr'
+      Ipv6CidrBlock: !Select [1, !Cidr [!Select [0, !GetAtt 'VPC.Ipv6CidrBlocks'], 256, 64]]
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: !Join ["-",[!Ref 'Environment', !Ref "Project", "PublicSubnet2"]]
+        - Key: Environment
+          Value: !Ref 'Environment'
+
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPCv6
+    Properties:
+      #AvailabilityZone: "us-east-1c"
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      CidrBlock: !Ref 'PrivateSubnet1Cidr'
+      Ipv6CidrBlock: !Select [2, !Cidr [!Select [0, !GetAtt 'VPC.Ipv6CidrBlocks'], 256, 64]]
+      MapPublicIpOnLaunch: false
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: !Join ["-",[!Ref 'Environment', !Ref "Project", "PrivateSubnet1"]]
+        - Key: Environment
+          Value: !Ref 'Environment'
+
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPCv6
+    Properties:
+     #AvailabilityZone: "us-east-1d"
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      CidrBlock: !Ref 'PrivateSubnet2Cidr'
+      Ipv6CidrBlock: !Select [3, !Cidr [!Select [0, !GetAtt 'VPC.Ipv6CidrBlocks'], 256, 64]]
+      MapPublicIpOnLaunch: false
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: !Join ["-",[!Ref 'Environment', !Ref "Project", "PrivateSubnet2"]]
+        - Key: Environment
+          Value: !Ref 'Environment'
+
+# Internet Gateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join ["",[!Ref 'Environment', !Ref "Project","IGW"]]
+        - Key: Environment
+          Value: !Ref 'Environment'
+
+  AttachInternetGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref 'InternetGateway'
+      VpcId: !Ref 'VPC'
+
+
+#Elastic IP allocation for NAT Gateways
+  EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: AttachInternetGateway
+    Properties:
+      Domain: vpc
+
+#NAT Gateway
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - EIP
+          - AllocationId
+      SubnetId: !Ref 'PublicSubnet1'
+      Tags:
+        - Key: Name
+          Value: !Join ["",[!Ref 'Environment', "NatGateway"]]
+
+#Route Table
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: !Sub ${VPC}-PublicRouteTable
+        - Key: Environment
+          Value: !Ref 'Environment'
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: !Sub ${VPC}-PrivateRouteTable
+        - Key: Environment
+          Value: !Ref 'Environment'
+
+  PublicSubnet1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref 'PublicRouteTable'
+      SubnetId: !Ref 'PublicSubnet1'
+
+  PublicSubnet2Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref 'PublicRouteTable'
+      SubnetId: !Ref 'PublicSubnet2'
+
+  PrivateSubnet1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref 'PrivateRouteTable'
+      SubnetId: !Ref 'PrivateSubnet1'
+
+  PrivateSubnet2Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref 'PrivateRouteTable'
+      SubnetId: !Ref 'PrivateSubnet2'
+
+
+#Routing Rules
+
+  PublicRoutingTable:
+    Type: AWS::EC2::Route
+    DependsOn: AttachInternetGateway
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref 'InternetGateway'
+      RouteTableId: !Ref 'PublicRouteTable'
+
+  PublicSubnetDefaultIpv6Route:
+    DependsOn: AttachInternetGateway
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationIpv6CidrBlock: ::/0
+      RouteTableId: !Ref 'PublicRouteTable'
+      GatewayId: !Ref 'InternetGateway'
+
+  PrivateRoutingTable:
+    Type: AWS::EC2::Route
+    DependsOn: AttachInternetGateway
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref 'NatGateway'
+      RouteTableId: !Ref 'PrivateRouteTable'
+
+
+Outputs:
+  #Stack Details
+  AwsAccountID:
+    Description: The aws account ID
+    Value: !Ref "AWS::AccountId"
+    Export:
+      Name: AWS-Account-ID
+
+  EnvironmentName:
+    Description: stack Environment
+    Value: !Ref "Environment"
+    Export:
+      Name: "Environment"
+
+  ProjectName:
+    Description: Project Name
+    Value: !Ref "Project"
+    Export:
+      Name: Project-Name
+
+  AwsRegion:
+    Description: The aws account ID
+    Value: !Ref "AWS::Region"
+    Export:
+      Name: !Sub "${AWS::StackName}-${AWS::Region}"
+
+  StackName:
+    Description: The ID of the VPC
+    Value: !Ref "AWS::StackName"
+    Export:
+      Name: !Sub "${AWS::StackName}-${Project}"
+
+  #stack components Details
+  StackVPC:
+    Description: The ID of the VPC
+    Value: !Ref VPC
+    Export:
+      Name: !Join["-"[!Ref 'Environment', VPC]]
+  PublicSubnetOne:
+    Description: Public subnet1
+    Value: !Ref "PublicSubnet1"
+    Export:
+      Name: !Join["-"[!Ref 'Environment', PublicSubnet1]]
+  PublicSubnetTwo:
+    Description: Public subnet2
+    Value: !Ref "PublicSubnet2"
+    Export:
+      Name: !Join["-"[!Ref 'Environment', PublicSubnet2]]
+  PrivateSubnetOne:
+    Description: Private Subnet 1
+    Value: !Ref "PrivateSubnet1"
+    Export:
+      Name: !Join["-"[!Ref 'Environment', PrivateSubnet1]]
+  PrivateSubnetTwo:
+    Description: Private Subnet 2
+    Value: !Ref "PrivateSubnet2"
+    Export:
+      Name: !Join["-"[!Ref 'Environment', PrivateSubnet2]]

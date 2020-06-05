@@ -1,0 +1,69 @@
+Description: AutoScaling Policy
+
+Parameters:
+  ASGName:
+    Type: String
+  TargetGroupARN:
+    Type: String
+
+Resources:
+  ASGAverageCPUUtilization:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref 'ASGName'
+      Cooldown: 30
+      EstimatedInstanceWarmup: 20
+      # MetricAggregationType: Average
+      # MinAdjustmentMagnitude: Integer
+      PolicyType: TargetTrackingScaling
+      # ScalingAdjustment: 1
+      # StepAdjustments:
+        # - StepAdjustment
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 90
+
+  RequestCountPerTargetScale:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref 'ASGName'
+      Cooldown: 30
+      EstimatedInstanceWarmup: 20
+      # MinAdjustmentMagnitude: Integer
+      PolicyType: TargetTrackingScaling
+      # ScalingAdjustment: 1
+      # StepAdjustments:
+        # - StepAdjustment
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ALBRequestCountPerTarget
+          ResourceLabel: !Ref 'TargetGroupARN'
+        TargetValue: 2000
+
+  HighRequestCountPerTargetGroup:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref 'ASGName'
+      Cooldown: 180
+      # EstimatedInstanceWarmup: 30
+      # MetricAggregationType: Average
+      # MinAdjustmentMagnitude: Integer
+      PolicyType: SimpleScaling
+      ScalingAdjustment: 1
+
+
+  NormalRequestCountPerTargetGroup:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ExactCapacity
+      AutoScalingGroupName: !Ref 'ASGName'
+      Cooldown: 180
+      # EstimatedInstanceWarmup: 30
+      # MetricAggregationType: Average
+      # MinAdjustmentMagnitude: Integer
+      PolicyType: SimpleScaling
+      ScalingAdjustment: 2

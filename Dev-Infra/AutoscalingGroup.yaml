@@ -1,0 +1,109 @@
+Description: Autoscaling Group
+
+
+Parameters:
+  ImageID:
+    Type: String
+    Default: ami-09d95fab7fff3776c
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.large
+      - t2.micro
+      - m4.large
+      - m4.xlarge
+  KeyName:
+    Type: String
+    Default: apachekey
+  Environment:
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - Stage
+      - Prod
+  PrivateSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+  ASGName:
+    Type: String
+    Default: Sample
+  DesiredCapacity:
+    Type: String
+    Default: 1
+  MaxSize:
+    Type: Number
+    Default: 2
+  HealthCheckType:
+    Type: String
+    Default: ELB
+    AllowedValues:
+      - EC2
+      - ELB
+  TargetGroupARN:
+    Type: String
+    Default: "arn:aws:elasticloadbalancing:us-east-1:404434860735:targetgroup/Dev-TargetGroup/469d9336ee11a2f9"
+Resources:
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      AssociatePublicIpAddress: false
+      # BlockDeviceMappings:
+      #   - BlockDeviceMapping
+      EbsOptimized: false
+      # IamInstanceProfile: String
+      ImageId: !Ref 'ImageID'
+      InstanceMonitoring: true #default
+      InstanceType: !Ref 'InstanceType'
+      KeyName: !Ref 'KeyName'
+      LaunchConfigurationName: !Join ["-",[!Ref 'Environment', "LC"]]
+      # PlacementTenancy: String
+      SecurityGroups:
+        - !Ref 'EC2SecurityGroup'
+      # SpotPrice: String
+      # UserData: String
+
+
+  AutoscalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Ref 'ASGName'
+      VPCZoneIdentifier: !Ref 'PrivateSubnets'
+      # AvailabilityZones:
+      #   - !GetAZs ''
+      Cooldown: 60
+      DesiredCapacity: !Ref 'DesiredCapacity'
+      HealthCheckType: !Ref 'HealthCheckType'
+      HealthCheckGracePeriod: 15
+      LaunchConfigurationName: !Ref 'LaunchConfiguration'
+      MaxSize: !Ref 'MaxSize'
+      MetricsCollection:
+          - Granularity: 1Minute
+            Metrics:
+              - GroupMinSize
+              - GroupMaxSize
+              - GroupDesiredCapacity
+              - GroupInServiceInstances
+              - GroupTotalInstances
+            # - GroupPendingInstances
+            # - GroupStandbyInstances
+            # - GroupTerminatingInstances
+
+      MinSize: 1
+      # NotificationConfigurations:
+      #   - NotificationConfiguration
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-ASG
+          PropagateAtLaunch: "true"
+      TargetGroupARNs:
+        - !Ref 'TargetGroupARN'
+      TerminationPolicies:
+        - NewestInstance
+        - Default
+
+Outputs:
+  AutoScalingGroupName:
+    Value: !Ref 'ASGName'

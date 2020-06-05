@@ -1,0 +1,126 @@
+Description: Elasticache template
+Parameters:
+  Environment:
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - Stage
+      - Prod
+  AZMode:
+    Type: String
+    Description: Availabiliy zone mode
+    Default: cross-az
+    AllowedValues:
+      - cross-az
+      - single-az
+  CacheNodeType:
+    Type: String
+    Description: Cache node type
+    Default: cache.t2.micro
+    AllowedValues: [cache.m5.large, cache.m5.xlarge, cache.m5.2xlarge, cache.m5.4xlarge, cache.m5.12xlarge, cache.m5.24xlarge, cache.m4.large, cache.m4.xlarge, cache.m4.2xlarge, cache.m4.4xlarge, cache.m4.10xlarge, cache.t3.micro, cache.t3.small, cache.t3.medium, cache.t2.micro, cache.t2.small, cache.t2.medium]
+  PrivateSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  ClusterName:
+    Type: String
+    Default: SamStringple
+  Engine:
+    Type: String
+    Default: memcached
+    AllowedValues:
+      - memcached
+      - redis
+  Port:
+    Type: String
+    Default: 11211
+    Description: "ElastiCache Port, (Memcached: 1121, Redis: 6379)"
+  NumCacheNodes:
+    Type: String
+    Description: "Number of cache nodes"
+    Default: 2
+  EC2SecurityGroupID:
+    Type: "AWS::EC2::SecurityGroup::Id"
+  VPCID:
+    Type: AWS::EC2::VPC::Id
+
+
+Resources:
+  # CacheSecurityGroup:
+  #   Type: AWS::ElastiCache::SecurityGroup
+  #   Properties:
+  #     Description: Cache Security Group
+  # CacheSecurityGroupIngress1:
+  #   Type: AWS::ElastiCache::SecurityGroupIngress
+  #   Properties:
+  #     CacheSecurityGroupName: !Ref 'CacheSecurityGroup'
+  #     EC2SecurityGroupName: !Ref 'EC2SecurityGroupName'
+
+  CacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Cache Security group
+      GroupName: !Sub ${Environment}-elasticache-SG
+      VpcId: !Ref 'VPCID'
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-APP-SG
+
+  ServerSGIngress1:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'CacheSecurityGroup'
+      IpProtocol: tcp
+      Description: !Sub ${Environment}-EC2
+      FromPort: !Ref 'Port'
+      ToPort: !Ref 'Port'
+      SourceSecurityGroupId: !Ref 'EC2SecurityGroupID'
+  ServerSGIngress2:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'CacheSecurityGroup'
+      IpProtocol: tcp
+      Description: !Sub ${Environment}-EC2
+      FromPort: !Ref 'Port'
+      ToPort: !Ref 'Port'
+      SourceSecurityGroupId: !Ref 'EC2SecurityGroupID'
+
+
+
+  CacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      CacheSubnetGroupName: !Join ["-", [!Ref "AWS::StackName",ParameterGroup]]
+      Description: CacheSubnetGroup
+      SubnetIds: !Ref 'PrivateSubnets'
+
+
+  Elasticache:
+    Type: AWS::ElastiCache::CacheCluster
+    Properties:
+      # AutoMinorVersionUpgrade: Boolean
+      AZMode: !Ref 'AZMode'
+      CacheNodeType: !Ref 'CacheNodeType'
+      # CacheParameterGroupName: String
+      # CacheSecurityGroupNames:
+      #   - !Ref 'CacheSecurityGroup'
+      CacheSubnetGroupName: !Ref 'CacheSubnetGroup'
+      ClusterName: !Ref 'ClusterName'
+      Engine: !Ref 'Engine'
+      # EngineVersion: String
+      # NotificationTopicArn: String
+      NumCacheNodes: !Ref 'NumCacheNodes'
+      Port: !Ref 'Port'
+      # PreferredAvailabilityZone: String
+      # PreferredAvailabilityZones:
+      #   - String
+      # PreferredMaintenanceWindow: String
+      # SnapshotArns:
+      #   - String
+      # SnapshotName: String
+      # SnapshotRetentionLimit: 7
+      # SnapshotWindow: String
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [!Ref 'Environment', !Ref "AWS::StackName", ElasticCache]]
+      VpcSecurityGroupIds:
+        - !Ref 'CacheSecurityGroup'

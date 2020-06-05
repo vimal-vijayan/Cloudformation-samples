@@ -1,0 +1,38 @@
+Description: SQS Queue
+Parameters:
+  QueueType:
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+    ConstraintDescription: must be true or false.
+  QueueName:
+    Type: String
+    Default: sample
+
+Conditions:
+  IsFifoQueue: !Equals [!Ref 'QueueType', 'true']
+
+Resources:
+  SQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      #ContentBasedDeduplication: false
+      FifoQueue: !If [IsFifoQueue, true, !Ref "AWS::NoValue"]
+      # MaximumMessageSize: Integer
+      # MessageRetentionPeriod: Integer
+      QueueName: !If [IsFifoQueue, !Join [".",[!Ref 'QueueName', 'fifo']], !Ref 'QueueName']
+      # ReceiveMessageWaitTimeSeconds: Integer
+      # RedrivePolicy: Json
+      Tags:
+        - Key: Name
+          Value: !Ref 'QueueName'
+      # VisibilityTimeout: Integer
+Outputs:
+  QueueName:
+    Value: !Ref 'QueueName'
+    Export:
+      Name: QueueName
+  QueueArn:
+    Value: !GetAtt 'SQS.Arn'
+    Export:
+      Name: QueueArn

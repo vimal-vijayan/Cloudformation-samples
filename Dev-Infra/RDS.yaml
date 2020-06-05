@@ -1,0 +1,166 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation STemplate RDS_MySQL_With_Read_Replica'
+
+Parameters:
+  DBName:
+    Default: MyDatabase
+    Description: The database name
+    Type: String
+    # MinLength: '1'
+    # MaxLength: '64'
+    # AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    # ConstraintDescription: must begin with a letter and contain only alphanumericcharacters.
+  DBUser:
+    NoEcho: 'true'
+    Description: The database admin account username
+    Type: String
+    # MinLength: '1'
+    # MaxLength: '16'
+    # AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    # ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+  DBPassword:
+    NoEcho: 'true'
+    Description: The database admin account password
+    Type: String
+    # MinLength: '1'
+    # MaxLength: '41'
+    # AllowedPattern: '[a-zA-Z0-9]+'
+    # ConstraintDescription: must contain only alphanumeric characters.
+  DBAllocatedStorage:
+    Default: '5'
+    Description: The size of the database (Gb)
+    Type: Number
+    MinValue: '5'
+    MaxValue: '1024'
+    ConstraintDescription: must be between 5 and 1024Gb.
+
+  DBInstanceClass:
+    Description: The database instance type
+    Type: String
+    Default: db.t2.small
+    AllowedValues:
+      - db.t1.micro
+      - db.m1.small
+      - db.t2.small
+    # ConstraintDescription: must select a valid database instance type.
+  EC2SecurityGroup:
+    Description: The EC2 security group that contains instances that need access to the database
+    Default: default
+    Type: "AWS::EC2::SecurityGroup::Id"
+
+  # DBSnapshotId:
+  #   Description: Enter the ARN of DB Snapshot
+  #   Type: String
+
+  Environment:
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - Stage
+      - Prod
+
+  MultiAZ:
+    Description: Multi-AZ master database
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    ConstraintDescription: must be true or false.
+  VPCID:
+    Description: VPC ID
+    Type: "AWS::EC2::VPC::Id"
+  PrivateSubnets:
+    Description: Private Subnets
+    Type: List<AWS::EC2::Subnet::Id>
+
+Conditions:
+  IsEnviornmentProd: !Equals [!Ref 'Environment', Prod]
+  # IsDBSnapshot: !Not [!Equals [!Ref 'DBSnapshotId', '']]
+
+Resources:
+
+  DBSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      VpcId: !Ref 'VPCID'
+      GroupDescription: "Security group for RDS DB Instance."
+      # SecurityGroupIngress:
+      # - CidrIp: '10.0.0.0/16'
+      #   FromPort: "3306"
+      #   IpProtocol: "tcp"
+      #   ToPort: "3306"
+      # SecurityGroupEgress:
+      #   - IpProtocol: '-1'
+      #     CidrIp: '0.0.0.0/0'
+      Tags:
+        - Key: "Name"
+          Value: !Join ["-",[!Ref 'Environment', "RDS-SG"]]
+  RDSSGIngress1:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'DBSecurityGroup'
+      IpProtocol: tcp
+      ToPort: 3306
+      FromPort: 3306
+      SourceSecurityGroupId: !Ref 'EC2SecurityGroup'
+
+  DbSubnetGroup:
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties:
+      DBSubnetGroupDescription: "RDS DB subnet group"
+      SubnetIds: !Ref 'PrivateSubnets'
+        # - !Ref 'PrivateSubnet1'
+        # - !Ref 'PrivateSubnet2'
+
+  MasterDB:
+    Type: AWS::RDS::DBInstance
+    DependsOn: DBSecurityGroup
+    DeletionPolicy: Snapshot
+    Properties:
+      DBName: !Ref 'DBName'
+      # DBSnapshotIdentifier: !If [IsDBSnapshot, !Ref 'DBSnapshotId', !Ref 'AWS::NoValue']
+      DBInstanceIdentifier: !Sub ${Environment}-${DBName}
+      AllocatedStorage: !Ref 'DBAllocatedStorage'
+      DBInstanceClass: !Ref 'DBInstanceClass'
+      BackupRetentionPeriod: 7
+      # DeletionProtection: true
+      Engine: MySQL
+      # EngineVersion: 5.1.42
+      MasterUsername: !Ref 'DBUser'
+      MasterUserPassword: !Ref 'DBPassword'
+      MultiAZ: !Ref 'MultiAZ'
+      DBSubnetGroupName: !If [IsEnviornmentProd, !Ref 'DbSubnetGroup', !Ref 'DbSubnetGroup']
+      Tags:
+        - Key: Name
+          Value: Master Database
+      VPCSecurityGroups:
+        - !GetAtt 'DBSecurityGroup.GroupId'
+
+
+  ReplicaDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub ${Environment}-${DBName}-Reader
+      SourceDBInstanceIdentifier: !Ref 'MasterDB'
+      DBInstanceClass: !Ref 'DBInstanceClass'
+      #DBSubnetGroupName: !Ref 'DbSubnetGroup'
+      Tags:
+      - Key: Name
+        Value: Read Replica Database
+      # DBSecurityGroups: !Ref 'DBSecurityGroup'
+      VPCSecurityGroups:
+         - !GetAtt 'DBSecurityGroup.GroupId'
+
+Outputs:
+
+  MasterJDBCConnectionString:
+    Description: JDBC connection string for the master database
+    Value: !Join ['', ['jdbc:mysql://', !GetAtt [MasterDB, Endpoint.Address], ':', !GetAtt [MasterDB, Endpoint.Port], /, !Ref 'DBName']]
+
+  ReplicaJDBCConnectionString:
+    Description: JDBC connection string for the replica database
+    Value: !Join ['', ['jdbc:mysql://', !GetAtt [ReplicaDB, Endpoint.Address], ':', !GetAtt [ReplicaDB, Endpoint.Port], /, !Ref 'DBName']]
+
+  DBSecurityGroup:
+    Description: DB SecurityGroup
+    Value: !GetAtt 'DBSecurityGroup.GroupId'

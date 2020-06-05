@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ALB Stack
+
+
+Parameters:
+  VPCID:
+    Type: 'AWS::EC2::VPC::Id'
+  Environment:
+    Type: String
+  Project:
+    Type: String
+  PublicSubnet1:
+    Type: String
+  PublicSubnet2:
+    Type: String
+  Project:
+    Type: String
+    Default: Demo
+  Subnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Subnets
+
+
+Resources:
+
+#ALB Security Group
+  ApplicationLoadBalancerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to the public facing load balancer
+      GroupName: !Join ["-",[!Ref 'Environment', "ALB", "SG"]]
+      VpcId: !Ref 'VPCID'
+      SecurityGroupIngress:
+          # Allow access to ALB from anywhere on the internet
+          - CidrIp: 0.0.0.0/0
+            IpProtocol: -1
+          - CidrIpv6: ::/0
+            IpProtocol: -1
+      Tags:
+        - Key: Name
+          Value: !Join ["-",[!Ref 'Environment', "ALB", "SG"]]
+        - Key: VPC
+          Value: !Ref 'VPCID'
+
+#LoadBalancer
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Join ["-",[!Ref "Project", !Ref "Environment", "ALB"]]
+      IpAddressType: dualstack
+      LoadBalancerAttributes:
+          # - Key: deletion_protection.enabled
+          #   Value: true
+          - Key: idle_timeout.timeout_seconds
+            Value: 600
+          # - Key: access_logs.s3.enabled
+          #   Value: true
+          # - Key: access_logs.s3.bucket
+          #   Value: <create bucket for load balancer>
+      SecurityGroups:
+        - !Ref 'ApplicationLoadBalancerSG'
+      Subnets: !Ref 'Subnets'
+        # - !Ref 'PublicSubnet1'
+        # - !Ref 'PublicSubnet2'
+      Type: application
+      Tags:
+        - Key: Name
+          Value: !Ref 'VPCID'
+        - Key: Environment
+          Value: !Ref 'Environment'
+
+Outputs:
+  ALBSG:
+    Description: ALB Security Group
+    Value: !Ref 'ApplicationLoadBalancerSG'
+  ALBSGID:
+    Description: ALB Security Group ID
+    Value: !GetAtt 'ApplicationLoadBalancerSG.GroupId'
+  ALB:
+    Description: Application Load balancer
+    Value: !Ref 'ApplicationLoadBalancer'
+  AlbDNS:
+    Description: ALB DNS Name
+    Value: !GetAtt 'ApplicationLoadBalancer.DNSName'

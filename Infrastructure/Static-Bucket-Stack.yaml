@@ -1,0 +1,37 @@
+Description: s3 bucket for static content
+
+Parameters:
+  BucketName:
+    Type: String
+    AllowedPattern: "[a-z0-9//-//]*"
+
+Resources:
+  StaticBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref 'BucketName'
+      AccessControl: PublicRead
+      VersioningConfiguration:
+        Status: Enabled
+      WebsiteConfiguration:
+        IndexDocumnent: index.html
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref 'StaticBucket'
+      PolicyDocument:
+        Id: MyPolicy
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Join ['',['arn:aws:s3:::', !Ref 'StaticBucket', /*]]
+
+
+Outputs:
+  StaticBucketName:
+    Value: !Ref 'BucketName'
+    Export:
+      Name: StaticBucket

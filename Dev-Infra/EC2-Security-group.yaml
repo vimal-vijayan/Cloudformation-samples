@@ -1,0 +1,75 @@
+Description: Default Securit group for Server
+
+Parameters:
+  Environment:
+    Type: String
+  VPCID:
+    Type: 'AWS::EC2::VPC::Id'
+  ALBSGID:
+    Type: String
+  VpcCidr:
+    Type: String
+  PublicSubnet1Cidr:
+    Type: String
+  PublicSubnet2Cidr:
+    Type: String
+
+
+Resources:
+  ServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: bastion Security group
+      GroupName: !Sub ${Environment}-APP-SG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 34.231.136.18/32
+          FromPort: 0
+          ToPort: 65535
+          Description: Nagios
+        - IpProtocol: tcp
+          CidrIp: !Ref PublicSubnet1Cidr
+          FromPort: 22
+          ToPort: 22
+          Description: PublicSubnet1
+        - IpProtocol: tcp
+          CidrIp: !Ref PublicSubnet2Cidr
+          FromPort: 22
+          ToPort: 22
+          Description: PublicSubnet2
+        - IpProtocol: tcp
+          CidrIp: !Ref 'VpcCidr'
+          FromPort: 27017
+          ToPort: 27017
+          Description: VPC CIDR
+      VpcId: !Ref 'VPCID'
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-APP-SG
+
+  ServerSGIngress1:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'ServerSecurityGroup'
+      IpProtocol: tcp
+      Description: !Sub ${Environment}-ALB
+      FromPort: 80
+      ToPort: 80
+      SourceSecurityGroupId: !Ref 'ALBSGID'
+  ServerSGIngress2:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'ServerSecurityGroup'
+      IpProtocol: tcp
+      Description: !Sub ${Environment}-ALB
+      FromPort: 443
+      ToPort: 443
+      SourceSecurityGroupId: !Ref 'ALBSGID'
+
+Outputs:
+  EC2SecurityGroupName:
+    Description: Ec2 Default Securit Group Name
+    Value: !Ref 'ServerSecurityGroup'
+  EC2SecurityGroupID:
+    Description: EC2 Default security group ID
+    Value: !GetAtt 'ServerSecurityGroup.GroupId'

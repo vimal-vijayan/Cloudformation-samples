@@ -1,0 +1,43 @@
+Description: s3 bucket for static website
+
+Parameters:
+  BucketName:
+    Type: String
+
+Resources:
+  StaticBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref 'BucketName'
+      AccessControl: PublicRead
+      VersioningConfiguration:
+        Status: Enabled
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref 'StaticBucket'
+      PolicyDocument:
+        Id: MyPolicy
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Join ['',['arn:aws:s3:::', !Ref 'StaticBucket', /*]]
+Outputs:
+  BucketName:
+    Value: !Ref 'BucketName'
+    Export:
+      Name: BucketName
+  BucketARN:
+    Value: !GetAtt 'StaticBucket.Arn'
+  BucketDNS:
+    Description: Bucker Domain Name
+    Value: !GetAtt StaticBucket.DomainName
+  BucketURL:
+    Description: s3 bucket url
+    Value: !GetAtt 'StaticBucket.WebsiteURL'
