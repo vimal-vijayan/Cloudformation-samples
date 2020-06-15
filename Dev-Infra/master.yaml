@@ -62,27 +62,27 @@ Parameters:
     Default: MyDatabase
     Description: The database name
     Type: String
-    # MinLength: '1'
-    # MaxLength: '64'
-    # AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
-    # ConstraintDescription: must begin with a letter and contain only alphanumericcharacters.
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumericcharacters.
 
   DBUser:
     NoEcho: 'true'
     Description: The database admin account username
     Type: String
-      # MinLength: '1'
-      # MaxLength: '16'
-      # AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
-      # ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
   DBPassword:
     NoEcho: 'true'
     Description: The database admin account password
     Type: String
-    # MinLength: '1'
-    # MaxLength: '41'
-    # AllowedPattern: '[a-zA-Z0-9]+'
-    # ConstraintDescription: must contain only alphanumeric characters.
+    MinLength: '1'
+    MaxLength: '41'
+    AllowedPattern: '[a-zA-Z0-9]+'
+    ConstraintDescription: must contain only alphanumeric characters.
   DBAllocatedStorage:
     Default: '5'
     Description: The size of the database (Gb)
@@ -98,8 +98,9 @@ Parameters:
       - db.t1.micro
       - db.m1.small
       - db.t2.small
+      - db.t2.medium
   MultiAZ:
-    Description: Multi-AZ master database
+    Description: Multi-AZ or not..? [true,false]
     Type: String
     Default: 'false'
     AllowedValues: ['true', 'false']
@@ -109,6 +110,7 @@ Parameters:
 
   QueueType:
     Type: String
+    Description: Enter true/false [true=fif0, false=standard]
     AllowedValues: ['true', 'false']
     Default: 'false'
     ConstraintDescription: must be true for fifo que.
@@ -143,7 +145,7 @@ Parameters:
       - m4.xlarge
   BastionAMI:
     Type: String
-    Default: ami-09d95fab7fff3776c
+    Default: ami-0f0ef9f02e0ede909
 
 #ElasticCache Parameters
   AZMode:
@@ -160,10 +162,12 @@ Parameters:
     AllowedValues: [cache.m5.large, cache.m5.xlarge, cache.m5.2xlarge, cache.m5.4xlarge, cache.m5.12xlarge, cache.m5.24xlarge, cache.m4.large, cache.m4.xlarge, cache.m4.2xlarge, cache.m4.4xlarge, cache.m4.10xlarge, cache.t3.micro, cache.t3.small, cache.t3.medium, cache.t2.micro, cache.t2.small, cache.t2.medium]
   ClusterName:
     Type: String
-    Default: SamStringple
+    Default: SampleString
+    Description: Enter a valid cluster name
   Engine:
     Type: String
     Default: memcached
+    Description: "Select an engine from the drop down"
     AllowedValues:
       - memcached
       - redis
@@ -192,7 +196,60 @@ Metadata:
           - PublicSubnet2Cidr
           - PrivateSubnet1Cidr
           - PrivateSubnet2Cidr
+          - PrivateSubnet3Cidr
+      -
+        Label:
+          default: "Bastion Server Configuration"
+        Parameters:
           - KeyName
+          - BastionAMI
+          - InstanceType
+      -
+        Label:
+          default: "API Servers Configuration"
+        Parameters:
+          - KeyName
+          - ImageID
+          - ServerInstanceType
+          - ASGName
+      -
+        Label:
+          default: "DB Instance Configuration"
+        Parameters:
+          - DBName
+          - DBUser
+          - DBPassword
+          - DBAllocatedStorage
+          - DBInstanceClass
+          - MultiAZ
+
+      -
+        Label:
+          default: "SQS Configuration"
+        Parameters:
+          - QueueType
+          - QueueName
+      -
+        Label:
+          default: "SQS Configuration"
+        Parameters:
+          - ClusterName
+          - Engine
+          - CacheNodeType
+          - AZMode
+          - NumCacheNodes
+          - Port
+
+      -
+        Label:
+          default: "Static bucket Configuration"
+        Parameters:
+          - BucketName
+      -
+        Label:
+          default: "DNS Configuration"
+        Parameters:
+          - DomainName
 
 Conditions:
   IsEnviornmentProd: !Equals [!Ref 'Environment', Prod]
@@ -202,7 +259,7 @@ Resources:
   VPC:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://some-cf-script.s3.amazonaws.com/VPC.yaml
+      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/VPC.yaml
       Parameters:
         VpcCidr: !Ref "VpcCidr"
         Environment: !Ref "Environment"
@@ -216,7 +273,7 @@ Resources:
   ALB:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://some-cf-script.s3.amazonaws.com/ALB.yaml
+      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/ALB.yaml
       Parameters:
         VPCID: !GetAtt VPC.Outputs.VPC
         Environment: !Ref 'Environment'
@@ -229,7 +286,7 @@ Resources:
   DefultServerSG:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://some-cf-script.s3.amazonaws.com/EC2-Security-group.yaml
+      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/EC2-Security-group.yaml
       Parameters:
         VPCID: !GetAtt 'VPC.Outputs.VPC'
         Environment: !Ref 'Environment'
@@ -243,7 +300,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Condition: IsEnviornmentNotProd
     Properties:
-      TemplateURL: https://some-cf-script.s3.amazonaws.com/RDS.yaml
+      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/RDS.yaml
       Parameters:
         DBUser: !Ref 'DBUser'
         DBName: !Ref 'DBName'
@@ -260,7 +317,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Condition: IsEnviornmentProd
     Properties:
-      TemplateURL: https://some-cf-script.s3.amazonaws.com/RDS.yaml
+      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/RDS.yaml
       Parameters:
         DBUser: !Ref 'DBUser'
         DBPassword: !Ref 'DBPassword'
@@ -275,33 +332,33 @@ Resources:
   SQS:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://some-cf-script.s3.amazonaws.com/sqs.yaml
+      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/sqs.yaml
       Parameters:
         QueueType: !Ref 'QueueType'
         QueueName: !Ref 'QueueName'
 
-  StaticBucket:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: https://some-cf-script.s3.amazonaws.com/staticbucket.yaml
-      Parameters:
-        BucketName: !Ref 'BucketName'
-
-  CDN:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: https://some-cf-script.s3.amazonaws.com/CDN.yaml
-      Parameters:
-        ALBDNS: !GetAtt ALB.Outputs.AlbDNS
-        StaticBucket: !GetAtt StaticBucket.Outputs.BucketName
-        DomainName: !Ref 'DomainName'
-        BucketDNS: !GetAtt StaticBucket.Outputs.BucketDNS
+  # StaticBucket:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/staticbucket.yaml
+  #     Parameters:
+  #       BucketName: !Ref 'BucketName'
+  #
+  # CDN:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/CDN.yaml
+  #     Parameters:
+  #       ALBDNS: !GetAtt ALB.Outputs.AlbDNS
+  #       StaticBucket: !GetAtt StaticBucket.Outputs.BucketName
+  #       DomainName: !Ref 'DomainName'
+  #       BucketDNS: !GetAtt StaticBucket.Outputs.BucketDNS
 
 
   Bastion:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://some-cf-script.s3.amazonaws.com/Bastion.yaml
+      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/Bastion.yaml
       Parameters:
         VPCID: !GetAtt VPC.Outputs.VPC
         Environment: !Ref 'Environment'
@@ -309,42 +366,42 @@ Resources:
         KeyName: !Ref 'KeyName'
         BastionAMI: !Ref 'BastionAMI'
 
-  TargetGroup:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: https://some-cf-script.s3.amazonaws.com/TargetGroup.yaml
-      Parameters:
-        TargetGroupName: !Sub ${Environment}-TargetGroup
-        VPCID: !GetAtt 'VPC.Outputs.VPC'
-
-
-
-  WebServers:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: https://some-cf-script.s3.amazonaws.com/AutoscalingGroup.yaml
-      Parameters:
-        ImageID: !Ref 'ImageID'
-        InstanceType: !Ref 'InstanceType'
-        KeyName: !Ref 'KeyName'
-        Environment: !Ref 'Environment'
-        PrivateSubnets: !GetAtt 'VPC.Outputs.PrivateSubnets'
-        EC2SecurityGroup: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
-        ASGName: !Sub ${Environment}-WebServer-ASG
-        TargetGroupARN: !GetAtt 'TargetGroup.Outputs.TargetGroupARN'
-        # InstanceType: !Ref 'ServerInstanceType'
-
-  ElasticCache:
-    Type: AWS::CloudFormation::Stack
-    Condition: IsEnviornmentProd
-    Properties:
-      TemplateURL: https://some-cf-script.s3.amazonaws.com/Elasticache.yaml
-      Parameters:
-        AZMode: !Ref 'AZMode'
-        CacheNodeType: !Ref 'CacheNodeType'
-        PrivateSubnets: !GetAtt 'VPC.Outputs.ProdPrivateSubnets'
-        ClusterName: !Ref 'ClusterName'
-        Engine: !Ref 'Engine'
-        NumCacheNodes: !Ref 'NumCacheNodes'
-        EC2SecurityGroupID: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
-        Port: !Ref 'Port'
+  # TargetGroup:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/TargetGroup.yaml
+  #     Parameters:
+  #       TargetGroupName: !Sub ${Environment}-TargetGroup
+  #       VPCID: !GetAtt 'VPC.Outputs.VPC'
+  #
+  #
+  #
+  # WebServers:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/AutoscalingGroup.yaml
+  #     Parameters:
+  #       ImageID: !Ref 'ImageID'
+  #       InstanceType: !Ref 'InstanceType'
+  #       KeyName: !Ref 'KeyName'
+  #       Environment: !Ref 'Environment'
+  #       PrivateSubnets: !GetAtt 'VPC.Outputs.PrivateSubnets'
+  #       EC2SecurityGroup: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
+  #       ASGName: !Sub ${Environment}-WebServer-ASG
+  #       TargetGroupARN: !GetAtt 'TargetGroup.Outputs.TargetGroupARN'
+  #       # InstanceType: !Ref 'ServerInstanceType'
+  #
+  # ElasticCache:
+  #   Type: AWS::CloudFormation::Stack
+  #   Condition: IsEnviornmentProd
+  #   Properties:
+  #     TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/Elasticache.yaml
+  #     Parameters:
+  #       AZMode: !Ref 'AZMode'
+  #       CacheNodeType: !Ref 'CacheNodeType'
+  #       PrivateSubnets: !GetAtt 'VPC.Outputs.ProdPrivateSubnets'
+  #       ClusterName: !Ref 'ClusterName'
+  #       Engine: !Ref 'Engine'
+  #       NumCacheNodes: !Ref 'NumCacheNodes'
+  #       EC2SecurityGroupID: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
+  #       Port: !Ref 'Port'
