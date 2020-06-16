@@ -1,13 +1,13 @@
 version: "3.18"
 services:
   prometheus:
-    image: prom/prometheus
-#    build:
-#      context: .
-#      dockerfile: Dockerfile
-#      labels:
-#        - "Name:Prometheus"
-#        - "Environment:Prod"
+#    image: prom/prometheus
+    build:
+      context: .
+      dockerfile: Dockerfile
+      labels:
+        - "Name:Prometheus"
+        - "Environment:Prod"
     ports:
       - "9090:9090"
     container_name: prometheus-container
