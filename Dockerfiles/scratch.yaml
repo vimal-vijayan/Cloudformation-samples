@@ -30,7 +30,7 @@ services:
       - "grafana:/var/lib/grafana/data"
     links:
       - "prometheus"
-
+    container_name: grafana-container
 networks:
   hostnetwork:
 volumes:
