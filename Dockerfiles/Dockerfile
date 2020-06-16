@@ -1,5 +1,4 @@
 FROM prometheus:v2.19.0
-WORKDIR
 EXPOSE 9090
 RUN mkdir /prometheus-vol
 VOLUME /prometheus-vol
