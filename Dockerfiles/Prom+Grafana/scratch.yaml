@@ -3,7 +3,7 @@ services:
   prometheus:
 #    image: prom/prometheus
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
       labels:
         - "Name:Prometheus"
