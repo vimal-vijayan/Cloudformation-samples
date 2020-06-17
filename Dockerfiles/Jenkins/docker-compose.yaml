@@ -17,7 +17,7 @@ services:
     volumes:
       - "jenkins-home:/var/jenkins_home"
   nginx:
-    image: nginx
+    image: nginx:1.19.0-alpine
     labels:
       - "Name:Nginx"
       - "Environment:Dev"
