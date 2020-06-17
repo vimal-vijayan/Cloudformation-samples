@@ -22,12 +22,14 @@ services:
       - "Name:Nginx"
       - "Environment:Dev"
     ports:
-      - "80:80"
+      - "8181:8181"
     restart: on-failure
     volumes:
       - "./nginx.conf:/etc/nginx/conf.d/default.conf"
     depends_on:
       - jenkins
+    networks:
+      - jenkins-network
     links:
       - "jenkins"
 volumes:
