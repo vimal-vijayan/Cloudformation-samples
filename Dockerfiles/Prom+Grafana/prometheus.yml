@@ -7,14 +7,14 @@ global:
    monitor: 'codelab-monitor'
 
 # Alertmanager configuration
-alerting:
-  alertmanagers:
-  - static_configs:
-    - targets:
-      # - alertmanager:9093
+#alerting:
+#  alertmanagers:
+#  - static_configs:
+#    - targets:
+#      # - alertmanager:9093
 
 # Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
-rule_files:
+#rule_files:
   # - "first_rules.yml"
   # - "second_rules.yml"
 
@@ -31,30 +31,30 @@ scrape_configs:
     static_configs:
     - targets: ['localhost:9090']
 
-  - job_name: 'dev-node'
-    static_configs:
-        - targets: ['192.168.10.130:9100']
+#  - job_name: 'dev-node'
+#    static_configs:
+#        - targets: ['192.168.10.130:9100']
 
-  - job_name: 'stage-node'
-    scrape_interval: 5s
-    ec2_sd_configs:
-      - region: us-east-1
-        access_key: <access key>
-        secret_key: <secret_key>
-        port: 9100
-        filters:
-          - name: tag:Name
-            values:
-              - STG*
+#  - job_name: 'stage-node'
+#    scrape_interval: 5s
+#    ec2_sd_configs:
+#      - region: us-east-1
+#        access_key: <access key>
+#        secret_key: <secret_key>
+#        port: 9100
+#        filters:
+#          - name: tag:Name
+#            values:
+#              - STG*
 
-  - job_name: 'Mobile-nodes'
-    scrape_interval: 5s
-    ec2_sd_configs:
-      - region: us-east-1
-        access_key: <access key>
-        secret_key: <secret_key>
-        port: 9100
-        filters:
-          - name: tag:Name
-            values:
-              - mongkeyProd-Mobile
+#  - job_name: 'Mobile-nodes'
+#    scrape_interval: 5s
+#    ec2_sd_configs:
+#      - region: us-east-1
+#        access_key: <access key>
+#        secret_key: <secret_key>
+#        port: 9100
+#        filters:
+#          - name: tag:Name
+#            values:
+#              - mongkeyProd-Mobile

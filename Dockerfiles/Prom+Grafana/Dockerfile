@@ -1,4 +1,4 @@
-FROM prometheus:v2.19.0
+FROM prom/prometheus
 EXPOSE 9090
-COPY prometheus.yml /etc/prometheus/prometheus.yml
-ENTRYPOINT ["/bin/prometheus"]
+COPY ./prometheus.yml /etc/prometheus/prometheus.yml
+#ENTRYPOINT ["/bin/prometheus"]
