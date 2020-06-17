@@ -32,6 +32,7 @@ services:
       - jenkins-network
     links:
       - "jenkins"
+    container_name: Nginx-container
 volumes:
   jenkins-home:
 networks:
