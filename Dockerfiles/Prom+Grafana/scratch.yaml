@@ -31,6 +31,17 @@ services:
     links:
       - "prometheus"
     container_name: grafana-container
+  NodeExporter:
+    image: prom/node-exporter
+    port: "9100:9100"
+    networks:
+      - hostnetwork
+    depends_on:
+      - prometheus
+    links:
+      - "prometheus"
+    container_name: NodeExporter-container
+    restart: on-failure
 networks:
   hostnetwork:
 volumes:
