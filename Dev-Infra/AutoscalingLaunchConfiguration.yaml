@@ -1,0 +1,124 @@
+Description: Autoscaling Group
+
+
+Parameters:
+  ImageID:
+    Type: String
+    Default: ami-09d95fab7fff3776c
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.large
+      - t2.micro
+      - m4.large
+      - m4.xlarge
+  KeyName:
+    Type: String
+    Default: apachekey
+  Environment:
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - Stage
+      - Prod
+  PrivateSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+  ASGName:
+    Type: String
+    Default: Sample
+  DesiredCapacity:
+    Type: String
+    Default: 1
+  MaxSize:
+    Type: Number
+    Default: 2
+  HealthCheckType:
+    Type: String
+    Default: ELB
+    AllowedValues:
+      - EC2
+      - ELB
+  TargetGroupARN:
+    Type: String
+    Default: "arn:aws:elasticloadbalancing:us-east-1:404434860735:targetgroup/Dev-TargetGroup/469d9336ee11a2f9"
+  AppName:
+    Type: String
+    Description: Enter the application Name
+
+Resources:
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      AssociatePublicIpAddress: false
+      # BlockDeviceMappings:
+      #   - BlockDeviceMapping
+      EbsOptimized: false
+      IamInstanceProfile: "AmazonEC2SSMRole"
+      ImageId: !Ref 'ImageID'
+      InstanceMonitoring: true #default
+      InstanceType: !Ref 'InstanceType'
+      KeyName: !Ref 'KeyName'
+      LaunchConfigurationName: !Join ["-",[!Ref 'Environment', !Ref 'AppName', "LC"]]
+      # PlacementTenancy: String
+      SecurityGroups:
+        - !Ref 'EC2SecurityGroup'
+      # SpotPrice: String
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash -xe
+            apt-get update -y
+            add-apt-repository ppa:ondrej/php
+            apt-get install software-properties-common php7.1 php7.1-bcmath php7.1-zmq mcrypt php7.1-mcrypt php7.1-xml php7.1-curl php7.1-mbstring php7.1-gd php7.1-zip php7.1-mysql php7.1-intl imagemagick php7.1-imagick php7.1-apcu -y
+            apt-get install libzmq3-dev -y #Install 0Mq
+            apt-get install apache -y
+            service apache start
+            hostnamectl set-hostname Webserver-$(hostname -i | awk '{print $1}')
+
+  AutoscalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Ref 'ASGName'
+      VPCZoneIdentifier: !Ref 'PrivateSubnets'
+      # AvailabilityZones:
+      #   - !GetAZs ''
+      Cooldown: 60
+      DesiredCapacity: !Ref 'DesiredCapacity'
+      HealthCheckType: !Ref 'HealthCheckType'
+      HealthCheckGracePeriod: 15
+      LaunchConfigurationName: !Ref 'LaunchConfiguration'
+      MaxSize: !Ref 'MaxSize'
+      MetricsCollection:
+          - Granularity: 1Minute
+            Metrics:
+              - GroupMinSize
+              - GroupMaxSize
+              - GroupDesiredCapacity
+              - GroupInServiceInstances
+              - GroupTotalInstances
+            # - GroupPendingInstances
+            # - GroupStandbyInstances
+            # - GroupTerminatingInstances
+
+      MinSize: 1
+      # NotificationConfigurations:
+      #   - NotificationConfiguration
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-${AppName}-WebServer
+          PropagateAtLaunch: "true"
+        - Key: Environment
+          Value: !Ref 'Environment'
+      TargetGroupARNs:
+        - !Ref 'TargetGroupARN'
+      TerminationPolicies:
+        - NewestInstance
+        - Default
+
+Outputs:
+  AutoScalingGroupName:
+    Value: !Ref 'ASGName'

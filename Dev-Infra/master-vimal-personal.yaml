@@ -55,7 +55,10 @@ Parameters:
     Type: String
     Description: Static website bucket name
     Default: sample-bucket-for-vimal
-    # AllowedPattern: "[a-z][a-z0-9]*"
+    # AllowedPattern: "[a-z][a-z0-9]*""
+  AppName:
+    Type: String
+    Description: Enter the application Name
 
 #RDS Parameters
   DBName:
@@ -122,7 +125,7 @@ Parameters:
     Default: sample.com
   ImageID:
     Type: String
-    Default: ami-09d95fab7fff3776c
+    Default: ami-085925f297f89fce1
   InstanceType:
     Type: String
     Default: t2.micro
@@ -211,6 +214,7 @@ Metadata:
           - KeyName
           - ImageID
           - ServerInstanceType
+          - AppName
           - ASGName
       -
         Label:
@@ -259,7 +263,7 @@ Resources:
   VPC:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/VPC.yaml
+      TemplateURL: https://some-cf-script.s3.amazonaws.com/VPC.yaml
       Parameters:
         VpcCidr: !Ref "VpcCidr"
         Environment: !Ref "Environment"
@@ -273,7 +277,7 @@ Resources:
   ALB:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/ALB.yaml
+      TemplateURL: https://some-cf-script.s3.amazonaws.com/ALB.yaml
       Parameters:
         VPCID: !GetAtt VPC.Outputs.VPC
         Environment: !Ref 'Environment'
@@ -286,7 +290,7 @@ Resources:
   DefultServerSG:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/EC2-Security-group.yaml
+      TemplateURL: https://some-cf-script.s3.amazonaws.com/EC2-Security-group.yaml
       Parameters:
         VPCID: !GetAtt 'VPC.Outputs.VPC'
         Environment: !Ref 'Environment'
@@ -296,28 +300,28 @@ Resources:
         PublicSubnet2Cidr: !Ref 'PublicSubnet2Cidr'
 
 
-  RDS:
-    Type: AWS::CloudFormation::Stack
-    Condition: IsEnviornmentNotProd
-    Properties:
-      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/RDS.yaml
-      Parameters:
-        DBUser: !Ref 'DBUser'
-        DBName: !Ref 'DBName'
-        DBPassword: !Ref 'DBPassword'
-        Environment: !Ref 'Environment'
-        VPCID: !GetAtt 'VPC.Outputs.VPC'
-        DBAllocatedStorage: !Ref 'DBAllocatedStorage'
-        DBInstanceClass: !Ref 'DBInstanceClass'
-        MultiAZ: !Ref 'MultiAZ'
-        PrivateSubnets: !GetAtt 'VPC.Outputs.PrivateSubnets'
-        EC2SecurityGroup: !GetAtt DefultServerSG.Outputs.EC2SecurityGroupID
+  # RDS:
+  #   Type: AWS::CloudFormation::Stack
+  #   Condition: IsEnviornmentNotProd
+  #   Properties:
+  #     TemplateURL: https://some-cf-script.s3.amazonaws.com/RDS.yaml
+  #     Parameters:
+  #       DBUser: !Ref 'DBUser'
+  #       DBName: !Ref 'DBName'
+  #       DBPassword: !Ref 'DBPassword'
+  #       Environment: !Ref 'Environment'
+  #       VPCID: !GetAtt 'VPC.Outputs.VPC'
+  #       DBAllocatedStorage: !Ref 'DBAllocatedStorage'
+  #       DBInstanceClass: !Ref 'DBInstanceClass'
+  #       MultiAZ: !Ref 'MultiAZ'
+  #       PrivateSubnets: !GetAtt 'VPC.Outputs.PrivateSubnets'
+  #       EC2SecurityGroup: !GetAtt DefultServerSG.Outputs.EC2SecurityGroupID
 
   RDSProd:
     Type: AWS::CloudFormation::Stack
     Condition: IsEnviornmentProd
     Properties:
-      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/RDS.yaml
+      TemplateURL: https://some-cf-script.s3.amazonaws.com/RDS.yaml
       Parameters:
         DBUser: !Ref 'DBUser'
         DBPassword: !Ref 'DBPassword'
@@ -332,7 +336,7 @@ Resources:
   SQS:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/sqs.yaml
+      TemplateURL: https://some-cf-script.s3.amazonaws.com/sqs.yaml
       Parameters:
         QueueType: !Ref 'QueueType'
         QueueName: !Ref 'QueueName'
@@ -340,14 +344,14 @@ Resources:
   # StaticBucket:
   #   Type: AWS::CloudFormation::Stack
   #   Properties:
-  #     TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/staticbucket.yaml
+  #     TemplateURL: https://some-cf-script.s3.amazonaws.com/staticbucket.yaml
   #     Parameters:
   #       BucketName: !Ref 'BucketName'
   #
   # CDN:
   #   Type: AWS::CloudFormation::Stack
   #   Properties:
-  #     TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/CDN.yaml
+  #     TemplateURL: https://some-cf-script.s3.amazonaws.com/CDN.yaml
   #     Parameters:
   #       ALBDNS: !GetAtt ALB.Outputs.AlbDNS
   #       StaticBucket: !GetAtt StaticBucket.Outputs.BucketName
@@ -358,7 +362,7 @@ Resources:
 #  Bastion:
 #    Type: AWS::CloudFormation::Stack
 #    Properties:
-#      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/Bastion.yaml
+#      TemplateURL: https://some-cf-script.s3.amazonaws.com/Bastion.yaml
 #      Parameters:
 #        VPCID: !GetAtt VPC.Outputs.VPC
 #        Environment: !Ref 'Environment'
@@ -369,7 +373,7 @@ Resources:
   TargetGroup:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/TargetGroup.yaml
+      TemplateURL: https://some-cf-script.s3.amazonaws.com/TargetGroup.yaml
       Parameters:
         TargetGroupName: !Sub ${Environment}-TargetGroup
         VPCID: !GetAtt 'VPC.Outputs.VPC'
@@ -379,8 +383,8 @@ Resources:
   WebServers:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/AutoscalingLaunchConfiguration.yaml
-      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/AutoscalingGroup.yaml
+      TemplateURL: https://some-cf-script.s3.amazonaws.com/AutoscalingLaunchConfiguration.yaml
+      # TemplateURL: https://some-cf-script.s3.amazonaws.com/AutoscalingGroup.yaml
       Parameters:
         ImageID: !Ref 'ImageID'
         InstanceType: !Ref 'InstanceType'
@@ -390,13 +394,14 @@ Resources:
         EC2SecurityGroup: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
         ASGName: !Sub ${Environment}-WebServer-ASG
         TargetGroupARN: !GetAtt 'TargetGroup.Outputs.TargetGroupARN'
-        # InstanceType: !Ref 'ServerInstanceType'
+        AppName: !Ref 'AppName'
+        InstanceType: !Ref 'ServerInstanceType'
   #
   # ElasticCache:
   #   Type: AWS::CloudFormation::Stack
   #   Condition: IsEnviornmentProd
   #   Properties:
-  #     TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/Elasticache.yaml
+  #     TemplateURL: https://some-cf-script.s3.amazonaws.com/Elasticache.yaml
   #     Parameters:
   #       AZMode: !Ref 'AZMode'
   #       CacheNodeType: !Ref 'CacheNodeType'
