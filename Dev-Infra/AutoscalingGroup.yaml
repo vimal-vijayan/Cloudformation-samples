@@ -4,11 +4,14 @@ Description: Autoscaling Group
 Parameters:
   ImageID:
     Type: String
-    Default: ami-09d95fab7fff3776c
+    Default: ami-032407d0fa1966bf5
   InstanceType:
     Type: String
     Default: t2.micro
     AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.large
       - t2.large
       - t2.micro
       - m4.large
@@ -45,6 +48,10 @@ Parameters:
   TargetGroupARN:
     Type: String
     Default: "arn:aws:elasticloadbalancing:us-east-1:404434860735:targetgroup/Dev-TargetGroup/469d9336ee11a2f9"
+  AppName:
+    Type: String
+    Description: Enter the application Name
+
 Resources:
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -53,12 +60,12 @@ Resources:
       # BlockDeviceMappings:
       #   - BlockDeviceMapping
       EbsOptimized: false
-      # IamInstanceProfile: String
+      IamInstanceProfile: "AmazonEC2SSMRole"
       ImageId: !Ref 'ImageID'
       InstanceMonitoring: true #default
       InstanceType: !Ref 'InstanceType'
       KeyName: !Ref 'KeyName'
-      LaunchConfigurationName: !Join ["-",[!Ref 'Environment', "LC"]]
+      LaunchConfigurationName: !Join ["-",[!Ref 'Environment', !Ref 'AppName', "LC"]]
       # PlacementTenancy: String
       SecurityGroups:
         - !Ref 'EC2SecurityGroup'
@@ -96,7 +103,10 @@ Resources:
       #   - NotificationConfiguration
       Tags:
         - Key: Name
-          Value: !Sub ${Environment}-ASG
+          Value: !Join ["-",[!Ref 'Environment', !Ref 'AppName']]
+          PropagateAtLaunch: "true"
+        - Key: Environment
+          Value: !Ref 'Environment'
           PropagateAtLaunch: "true"
       TargetGroupARNs:
         - !Ref 'TargetGroupARN'

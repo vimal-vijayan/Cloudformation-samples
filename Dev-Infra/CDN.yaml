@@ -8,6 +8,7 @@ Parameters:
     Type: String
     Default: Demo-Dev-ALB-1146799061.us-east-1.elb.amazonaws.com
   DomainName:
+    # Type: CommaDelimitedList
     Type: String
     Default: sample.com
   BucketDNS:
@@ -20,34 +21,38 @@ Resources:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
     Properties:
       CloudFrontOriginAccessIdentityConfig:
-        Comment: !Sub 'CloudFront OAI for ${DomainName}'
+        Comment: "CloudFront OAI"
 
   cloudfrontdistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
-          # Aliases:
-          #   - Ref 'DomainName'
+          Aliases:
+            - "gritit-backend-dev.qburst.build"
+            - "gritit-api-dev.qburst.build"
+            - "gritit-survey-dev.qburst.build"
+            - "gritit-swagger-dev.qburst.build"
+            - "gritit-ops.qburst.build"
           CacheBehaviors:
-            - AllowedMethods:
-                - GET
-                - HEAD
-                - OPTIONS
-              CachedMethods:
-                - GET
-                - HEAD
-              Compress: true
-              ForwardedValues:
-                QueryString: false
-                # Cookies:
-                #   Forward: none
-              # LambdaFunctionAssociations:
-              #   - LambdaFunctionAssociation
-              # MaxTTL: Double
-              # MinTTL: Double
-              PathPattern: "*"
-              TargetOriginId: thes3orgin
-              ViewerProtocolPolicy: allow-all #redirect-to-https
+            # - AllowedMethods:
+            #     - GET
+            #     - HEAD
+            #     - OPTIONS
+            #   CachedMethods:
+            #     - GET
+            #     - HEAD
+            #   Compress: true
+            #   ForwardedValues:
+            #     QueryString: false
+            #     # Cookies:
+            #     #   Forward: none
+            #   # LambdaFunctionAssociations:
+            #   #   - LambdaFunctionAssociation
+            #   # MaxTTL: Double
+            #   # MinTTL: Double
+            #   PathPattern: "*"
+            #   TargetOriginId: thes3orgin
+              # ViewerProtocolPolicy: redirect-to-https
             - AllowedMethods:
                 - GET
                 - HEAD
@@ -65,7 +70,8 @@ Resources:
               # MaxTTL: Double
               # MinTTL: Double
               PathPattern: /
-              TargetOriginId: AlbOrigin
+              # TargetOriginId: AlbOrigin
+              TargetOriginId: thes3orgin
               ViewerProtocolPolicy: allow-all #redirect-to-https
 
           Comment: Cloudfront Distribution for <client>
@@ -75,7 +81,8 @@ Resources:
             Compress: true
             ForwardedValues:
               QueryString: false
-            TargetOriginId: thes3orgin
+            # TargetOriginId: thes3orgin
+            TargetOriginId: AlbOrigin
             ViewerProtocolPolicy: allow-all
           DefaultRootObject: index.html
           Enabled: true
@@ -99,10 +106,10 @@ Resources:
           # PriceClass: String
           # Restrictions:
           #   Restrictions
-          # ViewerCertificate:
-          #   AcmCertificateArn: <acm certificate arn>
-          #   MinimumProtocolVersion: TLSv1.2_2018
-          #   SslSupportMethod: sni-only
+          ViewerCertificate:
+            AcmCertificateArn: "arn:aws:acm:us-east-1:225558908404:certificate/a20dbf76-423b-48df-a9df-fb2fcfc75b05"
+            MinimumProtocolVersion: TLSv1.2_2018
+            SslSupportMethod: sni-only
           # WebACLId: String
       Tags:
         - Key: Name

@@ -48,14 +48,16 @@ Parameters:
     Description: "Enter Private Subnet3 CIDR"
     Default: 10.0.4.0/24
   KeyName:
-    Type: String
+    Type: "AWS::EC2::KeyPair::KeyName"
     Description: Enter ssh key pair name
-    Default: apachekey
   BucketName:
     Type: String
     Description: Static website bucket name
     Default: sample-bucket-for-vimal
     # AllowedPattern: "[a-z][a-z0-9]*"
+  AppName:
+    Type: String
+    Description: Enter the application Name
 
 #RDS Parameters
   DBName:
@@ -119,14 +121,17 @@ Parameters:
     Default: sample
   DomainName:
     Type: String
-    Default: sample.com
+    Default: qburst.build
   ImageID:
     Type: String
-    Default: ami-09d95fab7fff3776c
+    Default: ami-032407d0fa1966bf5
   InstanceType:
     Type: String
     Default: t2.micro
     AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.large
       - t2.large
       - t2.micro
       - m4.large
@@ -139,6 +144,9 @@ Parameters:
     Type: String
     Default: t2.micro
     AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.large
       - t2.large
       - t2.micro
       - m4.large
@@ -174,11 +182,11 @@ Parameters:
   NumCacheNodes:
     Type: String
     Description: "Number of cache nodes"
-    Default: 2
+    Default: 1
   Port:
     Type: String
     Default: 11211
-    Description: "ElastiCache Port, (Memcached: 1121, Redis: 6379)"
+    Description: "ElastiCache Port, [Memcached: 1121, Redis: 6379]"
 
 
 Metadata:
@@ -208,6 +216,7 @@ Metadata:
         Label:
           default: "API Servers Configuration"
         Parameters:
+          - AppName
           - KeyName
           - ImageID
           - ServerInstanceType
@@ -337,22 +346,22 @@ Resources:
         QueueType: !Ref 'QueueType'
         QueueName: !Ref 'QueueName'
 
-  # StaticBucket:
-  #   Type: AWS::CloudFormation::Stack
-  #   Properties:
-  #     TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/staticbucket.yaml
-  #     Parameters:
-  #       BucketName: !Ref 'BucketName'
-  #
-  # CDN:
-  #   Type: AWS::CloudFormation::Stack
-  #   Properties:
-  #     TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/CDN.yaml
-  #     Parameters:
-  #       ALBDNS: !GetAtt ALB.Outputs.AlbDNS
-  #       StaticBucket: !GetAtt StaticBucket.Outputs.BucketName
-  #       DomainName: !Ref 'DomainName'
-  #       BucketDNS: !GetAtt StaticBucket.Outputs.BucketDNS
+  StaticBucket:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/staticbucket.yaml
+      Parameters:
+        BucketName: !Ref 'BucketName'
+
+  CDN:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/CDN.yaml
+      Parameters:
+        ALBDNS: !GetAtt ALB.Outputs.AlbDNS
+        StaticBucket: !GetAtt StaticBucket.Outputs.BucketName
+        DomainName: !Ref 'DomainName'
+        BucketDNS: !GetAtt StaticBucket.Outputs.BucketDNS
 
 
 #  Bastion:
@@ -374,12 +383,19 @@ Resources:
         TargetGroupName: !Sub ${Environment}-TargetGroup
         VPCID: !GetAtt 'VPC.Outputs.VPC'
 
+  # MqTargetGroup:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/TargetGroup.yaml
+  #     Parameters:
+  #       TargetGroupName: !Sub ${Environment}-Mq-TargetGroup
+  #       VPCID: !GetAtt 'VPC.Outputs.VPC'
 
 
   WebServers:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/AutoscalingLaunchConfiguration.yaml
+      # TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/AutoscalingLaunchConfiguration.yaml
       TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/AutoscalingGroup.yaml
       Parameters:
         ImageID: !Ref 'ImageID'
@@ -390,19 +406,54 @@ Resources:
         EC2SecurityGroup: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
         ASGName: !Sub ${Environment}-WebServer-ASG
         TargetGroupARN: !GetAtt 'TargetGroup.Outputs.TargetGroupARN'
-        # InstanceType: !Ref 'ServerInstanceType'
-  #
-  # ElasticCache:
+        InstanceType: !Ref 'ServerInstanceType'
+        AppName: !Ref 'AppName'
+
+  # MqServers:
   #   Type: AWS::CloudFormation::Stack
-  #   Condition: IsEnviornmentProd
   #   Properties:
-  #     TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/Elasticache.yaml
+  #     # TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/AutoscalingLaunchConfiguration.yaml
+  #     TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/AutoscalingGroup.yaml
   #     Parameters:
-  #       AZMode: !Ref 'AZMode'
-  #       CacheNodeType: !Ref 'CacheNodeType'
-  #       PrivateSubnets: !GetAtt 'VPC.Outputs.ProdPrivateSubnets'
-  #       ClusterName: !Ref 'ClusterName'
-  #       Engine: !Ref 'Engine'
-  #       NumCacheNodes: !Ref 'NumCacheNodes'
-  #       EC2SecurityGroupID: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
-  #       Port: !Ref 'Port'
+  #       ImageID: !Ref 'ImageID'
+  #       InstanceType: !Ref 'InstanceType'
+  #       KeyName: !Ref 'KeyName'
+  #       Environment: !Ref 'Environment'
+  #       PrivateSubnets: !GetAtt 'VPC.Outputs.PrivateSubnets'
+  #       EC2SecurityGroup: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
+  #       ASGName: !Sub ${Environment}-MqServer-ASG
+  #       TargetGroupARN: !GetAtt 'MqTargetGroup.Outputs.TargetGroupARN'
+  #       InstanceType: !Ref 'ServerInstanceType'
+  #       AppName: !Ref 'AppName'
+
+  ElastiCache:
+    Type: AWS::CloudFormation::Stack
+    Condition: IsEnviornmentProd
+    Properties:
+      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/Elasticache.yaml
+      Parameters:
+        AZMode: !Ref 'AZMode'
+        VPCID: !GetAtt 'VPC.Outputs.VPC'
+        CacheNodeType: !Ref 'CacheNodeType'
+        PrivateSubnets: !GetAtt 'VPC.Outputs.ProdPrivateSubnets'
+        ClusterName: !Ref 'ClusterName'
+        Engine: !Ref 'Engine'
+        NumCacheNodes: !Ref 'NumCacheNodes'
+        EC2SecurityGroupID: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
+        Port: !Ref 'Port'
+
+  ElastiCacheDevStage:
+    Type: AWS::CloudFormation::Stack
+    Condition: IsEnviornmentNotProd
+    Properties:
+      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/Elasticache.yaml
+      Parameters:
+        AZMode: !Ref 'AZMode'
+        VPCID: !GetAtt 'VPC.Outputs.VPC'
+        CacheNodeType: !Ref 'CacheNodeType'
+        PrivateSubnets: !GetAtt 'VPC.Outputs.PrivateSubnets'
+        ClusterName: !Ref 'ClusterName'
+        Engine: !Ref 'Engine'
+        NumCacheNodes: !Ref 'NumCacheNodes'
+        EC2SecurityGroupID: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
+        Port: !Ref 'Port'

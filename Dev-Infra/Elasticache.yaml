@@ -41,7 +41,7 @@ Parameters:
   EC2SecurityGroupID:
     Type: "AWS::EC2::SecurityGroup::Id"
   VPCID:
-    Type: AWS::EC2::VPC::Id
+    Type: "AWS::EC2::VPC::Id"
 
 
 Resources:
@@ -59,11 +59,11 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Cache Security group
-      GroupName: !Sub ${Environment}-elasticache-SG
+      GroupName: !Sub ${Environment}-Elasticache-SG
       VpcId: !Ref 'VPCID'
       Tags:
         - Key: Name
-          Value: !Sub ${Environment}-APP-SG
+          Value: !Sub ${Environment}-ElastiCache-APP-SG
 
   ServerSGIngress1:
     Type: AWS::EC2::SecurityGroupIngress
