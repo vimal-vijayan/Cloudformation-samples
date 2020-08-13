@@ -1,0 +1,29 @@
+Description: App s3 bucket
+Parameters:
+  Environment:
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - Stage
+      - Preprod
+      - Prod
+  BucketName:
+    Type: String
+    Description: Enter a bucketname
+    Default: gritit-bucket
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref 'BucketName'
+      Tags:
+        - Key: Name
+          Value: !Join ["-",[!Ref 'Environment', "BucketName"]]
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256

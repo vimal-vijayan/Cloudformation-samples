@@ -1,0 +1,23 @@
+---
+- hosts: all
+  remote_user: root
+  become: true
+  gather_facts: yes
+  tasks:
+  - name: Copy Code to the server
+    copy:
+      src: 
+      destination: /var/www/gritit_backoffice/
+      owner: root
+      group: root
+
+  - name: Composer Install
+    shell: |
+      composer install -d=/var/www/gritit_backoffice
+
+  # - name: Supervisor deploy
+  #   shell: |
+  #     supervisorctl restart {{ item }}
+  #   loop:
+  #     - supervisorconfname
+  #     - supervisorconfname

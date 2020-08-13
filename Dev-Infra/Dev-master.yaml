@@ -136,6 +136,8 @@ Parameters:
       - t2.micro
       - m4.large
       - m4.xlarge
+
+#Web Server AutoscalingGroup
   ASGName:
     Type: String
     Description: Provdie ASG Name
@@ -151,6 +153,7 @@ Parameters:
       - t2.micro
       - m4.large
       - m4.xlarge
+
   BastionAMI:
     Type: String
     Default: ami-0f0ef9f02e0ede909
@@ -188,6 +191,86 @@ Parameters:
     Default: 11211
     Description: "ElastiCache Port, [Memcached: 1121, Redis: 6379]"
 
+#JenkinsServer
+  JenkinsInstanceType:
+    Type: String
+    Description: Jenkins Instance type
+    AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t2.large
+      - t2.micro
+      - m4.large
+      - m4.xlarge
+  SSHLocation:
+    Description: The source IP address that will be allowed to SSH to the EC2 instances
+    Type: String
+    Default: 0.0.0.0/0
+  NodeExporter:
+    Type: String
+    Default: 0.0.0.0/0
+  Prometheus:
+    Type: String
+    Default: 0.0.0.0/0
+  InstanceAMIid:
+    Description: Server AMI ID
+    Type: String
+    Default: ami-01340702f4252b898
+  Grafana:
+    Type: String
+    Default: 0.0.0.0/0
+  JenkinsPort:
+    Type: String
+    Default: 0.0.0.0/0
+  JenkinsKeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+
+
+#Consumer Servers
+
+  ConsumerServerInstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t2.large
+      - t2.micro
+      - m4.large
+      - m4.xlarge
+  ConsumerImageID:
+    Type: String
+    Default: ami-0dbb1838af180eca3
+  ConsumerAppName:
+    Type: String
+    Description: Enter Conumer App Name
+    Default: consumer
+  ConsumerPort:
+    Type: String
+    Description: Enter the consumer port number
+
+#Tracker Targets
+  TrackerAppName:
+    Type: String
+    Description: Enter the Tracker Name
+    Default: Tracker-App
+  TrackerPort:
+    Type: Number
+    Description: Enter the tracker port number
+    Default: 5501
+
+#Tracker Targets
+  WebSocketAppName:
+    Type: String
+    Description: Enter the Tracker Name
+    Default: websocket
+  WebSocketPort:
+    Type: Number
+    Description: Enter the tracker port number
+    Default: 8101
+
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -221,6 +304,25 @@ Metadata:
           - ImageID
           - ServerInstanceType
           - ASGName
+      -
+        Label:
+          default: "Consumer Servers Configuration"
+        Parameters:
+          - ConsumerImageID
+          - ConsumerServerInstanceType
+          - ConsumerAppName
+      -
+        Label:
+          default: "Tracker Configuration"
+        Parameters:
+          - TrackerAppName
+          - TrackerPort
+      -
+        Label:
+          default: "Web Socket Configuration"
+        Parameters:
+          - WebSocketAppName
+          - WebSocketPort
       -
         Label:
           default: "DB Instance Configuration"
@@ -259,6 +361,18 @@ Metadata:
           default: "DNS Configuration"
         Parameters:
           - DomainName
+
+      -
+        Label:
+          default: "Jenkins with Monitoring"
+        Parameters:
+          - JenkinsKeyName
+          - JenkinsInstanceType
+          - InstanceAMIid
+          - JenkinsPort
+          - Grafana
+          - NodeExporter
+          - Prometheus
 
 Conditions:
   IsEnviornmentProd: !Equals [!Ref 'Environment', Prod]
@@ -375,6 +489,8 @@ Resources:
 #        KeyName: !Ref 'KeyName'
 #        BastionAMI: !Ref 'BastionAMI'
 
+
+#WebServerTargetGroup
   TargetGroup:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -457,3 +573,93 @@ Resources:
         NumCacheNodes: !Ref 'NumCacheNodes'
         EC2SecurityGroupID: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
         Port: !Ref 'Port'
+
+#Jenkins
+  Jenkins:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/JenMonit.yaml
+      Parameters:
+        KeyName: !Ref 'JenkinsKeyName'
+        InstanceType: !Ref 'JenkinsInstanceType'
+        Subnet: !GetAtt 'VPC.Outputs.PrivateSubnet1'
+        SecurityGroup: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
+        InstanceAMIid: !Ref 'InstanceAMIid'
+        VpcId: !GetAtt 'VPC.Outputs.VPC'
+        SSHLocation: !Ref 'SSHLocation'
+        JenkinsPort: !Ref 'JenkinsPort'
+        Grafana: !Ref 'Grafana'
+        NodeExporter: !Ref 'NodeExporter'
+        Prometheus: !Ref 'Prometheus'
+
+#Target Groups
+
+#Consumer Target Group
+  ConsumerTargetGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/TargetGroup.yaml
+      Parameters:
+        TargetGroupName: !Sub ${Environment}-Consumer-TargetGroup
+        VPCID: !GetAtt 'VPC.Outputs.VPC'
+        Port: !Ref 'ConsumerPort'
+        AppName: !Ref 'ConsumerAppName'
+
+  ConsumerServers:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      # TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/AutoscalingLaunchConfiguration.yaml
+      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/ConsumerAutoscalingGroup.yaml
+      Parameters:
+        ImageID: !Ref 'ConsumerImageID'
+        KeyName: !Ref 'KeyName'
+        Environment: !Ref 'Environment'
+        # PrivateSubnets: !GetAtt 'VPC.Outputs.PrivateSubnets'
+        PublicSubnets: !GetAtt 'VPC.Outputs.PublicSubnets'
+        EC2SecurityGroup: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
+        ASGName: !Sub ${Environment}-Consumer-ASG
+        TargetGroupARN: !GetAtt 'ConsumerTargetGroup.Outputs.TargetGroupARN'
+        InstanceType: !Ref 'ConsumerServerInstanceType'
+        AppName: !Ref 'ConsumerAppName'
+
+
+# Web Socket
+
+  WebSocketGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/TargetGroup.yaml
+      Parameters:
+        TargetGroupName: !Sub ${Environment}-WebSocket-TargetGroup
+        VPCID: !GetAtt 'VPC.Outputs.VPC'
+        AppName: !Ref 'WebSocketAppName'
+        Port: !Ref 'WebSocketPort'
+
+
+#Tracker Target Group
+
+  # TrackerTargetGroup:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/TargetGroup.yaml
+  #     Parameters:
+  #       TargetGroupName: !Sub ${Environment}-Consumer-TargetGroup
+  #       VPCID: !GetAtt 'VPC.Outputs.VPC'
+  #       AppName: !Ref 'TrackerAppName'
+  #       Port: !Ref 'TrackerPort'
+
+  # TrackerServers:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     # TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/AutoscalingLaunchConfiguration.yaml
+  #     TemplateURL: https://gritit-clouformation-templates.s3-eu-west-1.amazonaws.com/AutoscalingGroup.yaml
+  #     Parameters:
+  #       ImageID: !Ref 'ConsumerImageID'
+  #       KeyName: !Ref 'KeyName'
+  #       Environment: !Ref 'Environment'
+  #       PrivateSubnets: !GetAtt 'VPC.Outputs.PrivateSubnets'
+  #       EC2SecurityGroup: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
+  #       ASGName: !Sub ${Environment}-Consumer-ASG
+  #       TargetGroupARN: !GetAtt 'ConsumerTargetGroup.Outputs.TargetGroupARN'
+  #       InstanceType: !Ref 'ConsumerServerInstanceType'
+  #       AppName: !Ref 'TrackerAppName'

@@ -65,6 +65,33 @@ Resources:
       FromPort: 443
       ToPort: 443
       SourceSecurityGroupId: !Ref 'ALBSGID'
+  ConsumerServerIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'ServerSecurityGroup'
+      IpProtocol: tcp
+      Description: !Sub ${Environment}-ALB
+      FromPort: 8101
+      ToPort: 8101
+      SourceSecurityGroupId: !Ref 'ALBSGID'
+  TrackerServerIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'ServerSecurityGroup'
+      IpProtocol: tcp
+      Description: !Sub ${Environment}-ALB
+      FromPort: 5563
+      ToPort: 5563
+      SourceSecurityGroupId: !Ref 'ALBSGID'
+  MQServerIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'ServerSecurityGroup'
+      IpProtocol: tcp
+      Description: !Sub ${Environment}-ALB
+      FromPort: 5560
+      ToPort: 5560
+      SourceSecurityGroupId: !Ref 'ALBSGID'
 
 Outputs:
   EC2SecurityGroupName:

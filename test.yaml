@@ -1,0 +1,38 @@
+{
+    "Version": "2012-10-17",
+    "Id": "Policy1595919936146",
+    "Statement": [
+        {
+            "Sid": "Stmt1595919341113",
+            "Effect": "Deny",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::gritit-production-static-bucket/prod/daily-logs/*"
+        },
+        {
+            "Sid": "Stmt1595919341113",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:PutObject",
+            "Resource": "arn:aws:s3:::gritit-production-static-bucket/prod/daily-logs/*"
+        },
+        {
+            "Sid": "Stmt1595919901467",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::gritit-production-static-bucket/prod/documents-request-zipped/*",
+                "arn:aws:s3:::gritit-production-static-bucket/prod/daily_logs/form-submissions/*",
+                "arn:aws:s3:::gritit-production-static-bucket/prod/daily_logs/general-documents/*",
+                "arn:aws:s3:::gritit-production-static-bucket/prod/daily_logs/import_files/*",
+                "arn:aws:s3:::gritit-production-static-bucket/prod/daily_logs/operator-documents/*",
+                "arn:aws:s3:::gritit-production-static-bucket/prod/daily_logs/reports/*",
+                "arn:aws:s3:::gritit-production-static-bucket/prod/daily_logs/survey_uploads/*"
+            ]
+        }
+    ]
+}

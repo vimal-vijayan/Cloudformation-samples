@@ -1,0 +1,26 @@
+Description: AutoScaling Policy
+
+Parameters:
+  ASGName:
+    Type: String
+  TargetGroupARN:
+    Type: String
+
+Resources:
+  ASGAverageCPUUtilization:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref 'ASGName'
+      Cooldown: 30
+      EstimatedInstanceWarmup: 15
+      # MetricAggregationType: Average
+      # MinAdjustmentMagnitude: Integer
+      PolicyType: TargetTrackingScaling
+      # ScalingAdjustment: 1
+      # StepAdjustments:
+        # - StepAdjustment
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 75

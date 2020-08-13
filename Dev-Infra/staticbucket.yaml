@@ -17,6 +17,10 @@ Resources:
         ErrorDocument: error.html
       VersioningConfiguration:
         Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
   BucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -33,8 +37,6 @@ Resources:
 Outputs:
   BucketName:
     Value: !Ref 'BucketName'
-    Export:
-      Name: BucketName
   BucketARN:
     Value: !GetAtt 'StaticBucket.Arn'
   BucketDNS:

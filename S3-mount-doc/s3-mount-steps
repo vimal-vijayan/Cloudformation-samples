@@ -1,5 +1,5 @@
 1. apt-get update -y
-2. apt-get install s3fs
+2. apt-get install s3fs -y
 3. Attach ec2 role with s3 full access.
 4. aws s3 ls
 5. mkdir /s3mount
@@ -7,9 +7,12 @@
 7. aws s3 ls
 8. s3fs gritit-test-bucket /s3mount/
 9. s3fs --help
-  10. s3fs gritit-test-bucket /s3mount/ -o iam_role=AmazonEC2SSMRole
+10. s3fs gritit-test-bucket /s3mount/ -o iam_role=AmazonEC2SSMRole
 11. df -h
 12 .cd /s3mount/
 13. vi /etc/fstab
 14. s3fs#<bucketname> <mountpoint> fuse.s3fs _netdev,iam_role=<iam_role>,allow_other,umask=777, 0 0
     Eg: s3fs#gritit-test-bucket /s3mount fuse _netdev,iam_role=AmazonEC2SSMRole
+
+
+gritit-production-static-bucket

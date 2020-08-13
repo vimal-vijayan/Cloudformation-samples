@@ -1,0 +1,29 @@
+Description: Default Target group for ALB
+
+Parameters:
+  VPCID:
+    Description: VPC ID
+    Type: "AWS::EC2::VPC::Id"
+
+
+Resources:
+  DefaultTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPath: /index.html
+      HealthCheckPort: 80
+      Protocol: HTTP
+      Name: Default-TargetGroup
+      Port: 80
+      Tags:
+        - Key: Name
+          Value: Default-TargetGroup
+      VpcId: !Ref 'VPCID'
+
+Outputs:
+  DefaultTargetGroupARN:
+    Value: !Ref 'DefaultTargetGroup'
+  DefaultTargetGroupName:
+    Value: !GetAtt 'DefaultTargetGroup.TargetGroupName'
+  DefaultTargetGroupFullName:
+    Value: !GetAtt 'DefaultTargetGroup.TargetGroupFullName'

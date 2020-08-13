@@ -7,6 +7,7 @@ Parameters:
     Default: ami-032407d0fa1966bf5
   InstanceType:
     Type: String
+    Default: t2.micro
     AllowedValues:
       - t3.small
       - t3.medium
@@ -15,7 +16,6 @@ Parameters:
       - t2.micro
       - m4.large
       - m4.xlarge
-      - m5.large
       - c5.large
       - c5.xlarge
   KeyName:
@@ -27,9 +27,8 @@ Parameters:
     AllowedValues:
       - Dev
       - Stage
-      - Preprod
       - Prod
-  PrivateSubnets:
+  PublicSubnets:
     Type: List<AWS::EC2::Subnet::Id>
   EC2SecurityGroup:
     Type: AWS::EC2::SecurityGroup::Id
@@ -54,15 +53,12 @@ Parameters:
   AppName:
     Type: String
     Description: Enter the application Name
-  LcName:
-    Type: String
-    Description: Enter the LaunchConfiguration Name
 
 Resources:
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      AssociatePublicIpAddress: false
+      AssociatePublicIpAddress: true
       # BlockDeviceMappings:
       #   - BlockDeviceMapping
       EbsOptimized: false
@@ -71,7 +67,7 @@ Resources:
       InstanceMonitoring: true #default
       InstanceType: !Ref 'InstanceType'
       KeyName: !Ref 'KeyName'
-      LaunchConfigurationName: !Join ["-",[!Ref 'Environment', !Ref 'LcName', "LC"]]
+      LaunchConfigurationName: !Join ["-",[!Ref 'Environment', !Ref 'AppName', "LC"]]
       # PlacementTenancy: String
       SecurityGroups:
         - !Ref 'EC2SecurityGroup'

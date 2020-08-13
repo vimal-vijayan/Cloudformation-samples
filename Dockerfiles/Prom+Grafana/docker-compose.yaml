@@ -1,36 +1,37 @@
-version: "3.8"
+version: "3.3"
 services:
   prometheus:
-#    image: prom/prometheus
     build:
       context: .
-      dockerfile: Dockerfile
+      # dockerfile: Dockerfile
       labels:
         - "Name:Prometheus"
         - "Environment:Prod"
     ports:
       - "9090:9090"
-    container_name: prometheus-container
+    container_name: monitoring_prometheus
     expose:
       - 9090
     networks:
       - hostnetwork
     restart: on-failure
     volumes:
-      - "promdata:/var/lib/prom/data"
+       - "prometheus:/prometheus"
+       - "./prometheus.yml:/etc/prometheus/prometheus.yml"
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana:latest
     ports:
-      - "80:3000"
+      - "3000:3000"
     networks:
       - hostnetwork
     depends_on:
       - prometheus
     volumes:
-      - "grafana:/var/lib/grafana/data"
+      - "grafana:/var/lib/grafana"
+      - "./defaults.ini:/usr/share/grafana/conf/defaults.ini"
     links:
       - "prometheus"
-    container_name: grafana-container
+    container_name: monitoring_grafana
   NodeExporter:
     image: prom/node-exporter
     ports:
@@ -46,5 +47,5 @@ services:
 networks:
   hostnetwork:
 volumes:
-  promdata:
+  prometheus:
   grafana:

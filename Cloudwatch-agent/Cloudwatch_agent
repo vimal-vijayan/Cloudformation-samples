@@ -1,0 +1,11 @@
+wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-config-wizard
+apt-get update -y
+
+
+
+curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py -O
+sudo python ./awslogs-agent-setup.py --region eu-west-1
+vi /var/awslogs/etc/awslogs.conf --> Make necessary changes here
+service awslogs start

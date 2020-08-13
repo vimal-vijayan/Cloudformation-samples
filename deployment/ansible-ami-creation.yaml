@@ -1,0 +1,27 @@
+---
+- name: Create AMI out of the instance
+  ec2_ami:
+    instance_id: "{{ lookup('env',  'INSTANCE_ID') }}"
+    wait: yes
+    name: WebServerAMI
+    tags:
+      Name: WebServer
+      Environment: Dev
+      Service: TestService
+
+- name: Create new Launch Configuration
+  ec2_lc:
+    name: "{{ lookup('env',  'BUILDNUBER') }}"
+    image_id: ami-XXX
+    key_name: default
+    security_groups: ['group', 'group2' ]
+    instance_type: t1.micro
+    volumes:
+    - device_name: /dev/sda1
+      volume_size: 100
+      volume_type: io1
+      iops: 3000
+      delete_on_termination: true
+      encrypted: true
+    - device_name: /dev/sdb
+      ephemeral: ephemeral0

@@ -1,0 +1,710 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+
+  This template deploys a VPC, with a pair of public and private subnets spread
+  across two Availabilty Zones. It deploys an Internet Gateway, with a default
+  route on the public subnets. It deploys a NAT Gateway and default routes for them in the private subnets
+
+Parameters:
+  Project:
+    Type: String
+    Description: Enter Project Name
+    Default: Gritit
+  Environment:
+    Type: String
+    Description: "Please specify the Environment"
+    Default: Stage
+    AllowedValues:
+      - Dev
+      - Stage
+      - Prod
+  VpcName:
+    Type: String
+    Description: "Enter VPC Name"
+    Default:  STG-VPC
+  VpcCidr:
+    Type: String
+    Description: "Enter VPC CIDR"
+    Default: 10.192.0.0/16
+    # AllowedPattern: "[0-9\\.]*"
+  PublicSubnet1Cidr:
+    Type: String
+    Description: "Enter Public Subnet1 CIDR"
+    Default: 10.192.20.0/24
+  PublicSubnet2Cidr:
+    Type: String
+    Description: "Enter Public Subnet2 CIDR"
+    Default: 10.192.21.0/24
+  PrivateSubnet1Cidr:
+    Type: String
+    Description: "Enter Private Subnet1 CIDR"
+    Default: 10.192.22.0/24
+  PrivateSubnet2Cidr:
+    Type: String
+    Description: "Enter Private Subnet2 CIDR"
+    Default: 10.192.23.0/24
+  PrivateSubnet3Cidr:
+    Type: String
+    Description: "Enter Private Subnet3 CIDR"
+    Default: 10.192.24.0/24
+  KeyName:
+    Type: "AWS::EC2::KeyPair::KeyName"
+    Description: Enter ssh key pair name
+  BucketName:
+    Type: String
+    Description: Static website bucket name
+    Default: gritit-stg-static-bucket
+    # AllowedPattern: "[a-z][a-z0-9]*"
+  AppName:
+    Type: String
+    Default: Webserver
+    Description: Enter the application Name
+  WebLcName:WebLcName
+    Type: String
+    Description: Enter the LaunchConfiguration Name
+
+#RDS Parameters
+  DBInstanceName:
+    Default: GrititDB
+    Description: The database name
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    # AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    # ConstraintDescription: must begin with a letter and contain only alphanumericcharacters.
+
+  DBUser:
+    NoEcho: 'true'
+    Description: The database admin account username
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+  DBPassword:
+    NoEcho: 'true'
+    Description: The database admin account password
+    Type: String
+    MinLength: '1'
+    MaxLength: '41'
+    AllowedPattern: '[a-zA-Z0-9]+'
+    ConstraintDescription: must contain only alphanumeric characters.
+  DBAllocatedStorage:
+    Default: '5'
+    Description: The size of the database (Gb)
+    Type: Number
+    MinValue: '5'
+    MaxValue: '1024'
+    ConstraintDescription: must be between 5 and 1024Gb.
+  DBInstanceClass:
+    Description: The database instance type
+    Type: String
+    Default: db.t3.medium
+    AllowedValues:
+      - db.t1.micro
+      - db.m1.small
+      - db.t2.small
+      - db.t2.medium
+      - db.t3.medium
+
+  MultiAZ:
+    Description: Multi-AZ or not..? [true,false]
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    ConstraintDescription: must be true or false.
+
+#SQS Parameters
+
+  QueueType:
+    Type: String
+    Description: Enter true/false [true=fif0, false=standard]
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+    ConstraintDescription: must be true for fifo que.
+  QueueName:
+    Type: String
+    Default: gritit-stg-queue
+  DomainName:
+    Type: String
+    Default: qburst.build
+
+#webserver
+  ImageID:
+    Type: String
+    Default: ami-075464f9c1b02b88e
+  WebServerDesiredCapacity:
+    Type: Number
+    Default: 2
+  WebServerMax:
+    Type: Number
+    Default: 2
+    Description: Enter Web Server AutoscalingGroup Max size
+
+  ASGName:
+    Type: String
+    Description: Provide ASG Name
+    Default: webserver
+  ServerInstanceType:
+    Type: String
+    Default: m5.large
+    AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t2.large
+      - t2.micro
+      - m4.large
+      - m4.xlarge
+      - m5.large
+
+#Bastion
+
+  BastionAMI:
+    Type: String
+    Default: ami-0f0ef9f02e0ede909
+
+#ElasticCache Parameters
+  AZMode:
+    Type: String
+    Description: Availabiliy zone mode
+    Default: single-az
+    AllowedValues:
+      - cross-az
+      - single-az
+  CacheNodeType:
+    Type: String
+    Description: Cache node type
+    Default: cache.t2.micro
+    AllowedValues: [cache.m5.large, cache.m5.xlarge, cache.m5.2xlarge, cache.m5.4xlarge, cache.m5.12xlarge, cache.m5.24xlarge, cache.m4.large, cache.m4.xlarge, cache.m4.2xlarge, cache.m4.4xlarge, cache.m4.10xlarge, cache.t3.micro, cache.t3.small, cache.t3.medium, cache.t2.micro, cache.t2.small, cache.t2.medium]
+  ClusterName:
+    Type: String
+    Default: gritit-stg-cluster
+    Description: Enter a valid cluster name
+  Engine:
+    Type: String
+    Default: memcached
+    Description: "Select an engine from the drop down"
+    AllowedValues:
+      - memcached
+      - redis
+  NumCacheNodes:
+    Type: String
+    Description: "Number of cache nodes"
+    Default: 1
+  Port:
+    Type: String
+    Default: 11211
+    Description: "ElastiCache Port, [Memcached: 1121, Redis: 6379]"
+
+#Consumer Servers
+
+  ConsumerServerInstanceType:
+    Type: String
+    Default: m5.large
+    AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t2.large
+      - t2.micro
+      - m4.large
+      - m4.xlarge
+      - m5.large
+  ConsumerImageID:
+    Type: String
+    Default: ami-0a9354417dd94128a
+  ConsumerAppName:
+    Type: String
+    Description: Enter Conumer App Name
+    Default: consumer
+  ConsumerLcName:
+    Type: String
+    Description: Enter the LaunchConfiguration Name
+  ConsumerPort:
+    Type: String
+    Description: Enter the consumer port number
+    Default: 8101
+  ConsumerServerDesiredCapacity:
+    Type: Number
+    Description: Enter Consumer autoscaling DesiredCapacity size
+    Default: 2
+  ConsumerMaxSize:
+    Type: Number
+    Description: Enter Consumer autoscaling max size
+    Default: 2
+
+#Tracker Servers
+  TrackerAppName:
+    Type: String
+    Description: Enter the Tracker Name
+    Default: Tracker-App
+  TrackerLcName:
+    Type: String
+    Description: Enter the LaunchConfiguration Name
+  TrackerPort:
+    Type: Number
+    Description: Enter the tracker port number
+    Default: 5563
+  TrackerImageID:
+    Type: String
+    Description: Enter the tracker server image ID
+    Default: ami-0a9354417dd94128a
+  TrackerServerInstanceType:
+    Type: String
+    Default: t3.medium
+    AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t2.large
+      - t2.micro
+      - m4.large
+      - m4.xlarge
+      - m5.large
+  TrackerMaxSize:
+    Type: String
+    Description: Enter Tracker server autoscaling group max size (Default 1)
+    Default: 1
+  TrackerServerDesiredCapacity:
+    Type: Number
+    Description: Enter Consumer autoscaling DesiredCapacity size
+    Default: 1
+
+
+#Zero MQ Server
+  MqAppName:
+    Type: String
+    Description: Enter the Tracker Name
+    Default: MqApp
+  MqLcName:
+    Type: String
+    Description: Enter the LaunchConfiguration Name
+  MqPort:
+    Type: Number
+    Description: Enter the tracker port number
+    Default: 5560
+  MqServerImageID:
+    Type: String
+    Description: Enter MQ Server Image ID
+    Default: ami-075464f9c1b02b88e
+  MqServerInstanceType:
+    Type: String
+    Description: Select Instance type
+    Default: t3.medium
+    AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t2.large
+      - t2.micro
+      - m4.large
+      - m4.xlarge
+      - m5.large
+  MqServerDesiredCapacity:
+    Type: Number
+    Description: Enter Consumer autoscaling DesiredCapacity size
+    Default: 1
+  MqMaxSize:
+    Type: Number
+    Description: Enter mq server autoscaling group max size (default 1)
+    Default: 1
+
+  HealthCheckType:
+    Type: String
+    Default: EC2
+    AllowedValues:
+      - EC2
+      - ELB
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Network Configuration"
+        Parameters:
+          - Project
+          - Environment
+          - VpcName
+          - VpcCidr
+          - PublicSubnet1Cidr
+          - PublicSubnet2Cidr
+          - PrivateSubnet1Cidr
+          - PrivateSubnet2Cidr
+          - PrivateSubnet3Cidr
+      -
+        Label:
+          default: "Bastion Server Configuration"
+        Parameters:
+          - KeyName
+          - BastionAMI
+      -
+        Label:
+          default: "Web Servers Configuration"
+        Parameters:
+          - AppName
+          - KeyName
+          - ImageID
+          - ServerInstanceType
+          - WebLcName
+          - ASGName
+          - WebServerDesiredCapacity
+          - WebServerMax
+      -
+        Label:
+          default: "Consumer Servers Configuration"
+        Parameters:
+          - ConsumerImageID
+          - ConsumerServerInstanceType
+          - ConsumerAppName
+          - ConsumerLcName
+          - ConsumerServerDesiredCapacity
+          - ConsumerMaxSize
+          - ConsumerPort
+      -
+        Label:
+          default: "Tracker Server Configuration"
+        Parameters:
+          - TrackerAppName
+          - TrackerLcName
+          - TrackerServerInstanceType
+          - TrackerImageID
+          - TrackerPort
+          - TrackerServerDesiredCapacity
+          - TrackerMaxSize
+      -
+        Label:
+          default: "MQ Server Configuration"
+        Parameters:
+          - MqServerImageID
+          - MqServerInstanceType
+          - MqAppName
+          - MqLcName
+          - MqPort
+          - MqServerDesiredCapacity
+          - MqMaxSize
+      -
+        Label:
+          default: "DB Instance Configuration"
+        Parameters:
+          - DBInstanceName
+          - DBUser
+          - DBPassword
+          - DBAllocatedStorage
+          - DBInstanceClass
+          - MultiAZ
+
+      -
+        Label:
+          default: "SQS Configuration"
+        Parameters:
+          - QueueType
+          - QueueName
+      -
+        Label:
+          default: "Cache Configuration"
+        Parameters:
+          - ClusterName
+          - Engine
+          - CacheNodeType
+          - AZMode
+          - NumCacheNodes
+          - Port
+
+      -
+        Label:
+          default: "Static bucket Configuration"
+        Parameters:
+          - BucketName
+      -
+        Label:
+          default: "DNS Configuration"
+        Parameters:
+          - DomainName
+
+Conditions:
+  IsEnviornmentProd: !Equals [!Ref 'Environment', Prod]
+  IsEnviornmentNotProd: !Not [!Equals [!Ref 'Environment', Prod]]
+
+Resources:
+  VPC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/VPC.yaml
+      Parameters:
+        VpcCidr: !Ref "VpcCidr"
+        Environment: !Ref "Environment"
+        Project: !Ref "Project"
+        PublicSubnet1Cidr: !Ref 'PublicSubnet1Cidr'
+        PublicSubnet2Cidr: !Ref 'PublicSubnet2Cidr'
+        PrivateSubnet1Cidr: !Ref 'PrivateSubnet1Cidr'
+        PrivateSubnet2Cidr: !Ref 'PrivateSubnet2Cidr'
+        PrivateSubnet3Cidr: !Ref 'PrivateSubnet3Cidr'
+
+  ALB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/ALB.yaml
+      Parameters:
+        VPCID: !GetAtt VPC.Outputs.VPC
+        Environment: !Ref 'Environment'
+        Project: !Ref 'Project'
+        Subnets: !GetAtt VPC.Outputs.PublicSubnets
+        PublicSubnet1: !GetAtt VPC.Outputs.PublicSubnet1
+        PublicSubnet2: !GetAtt VPC.Outputs.PublicSubnet2
+
+
+  DefultServerSG:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/EC2-Security-group.yaml
+      Parameters:
+        VPCID: !GetAtt 'VPC.Outputs.VPC'
+        Environment: !Ref 'Environment'
+        ALBSGID: !GetAtt 'ALB.Outputs.ALBSGID'
+        VpcCidr: !Ref 'VpcCidr'
+        PublicSubnet1Cidr: !Ref 'PublicSubnet1Cidr'
+        PublicSubnet2Cidr: !Ref 'PublicSubnet2Cidr'
+
+
+  RDS:
+    Type: AWS::CloudFormation::Stack
+    Condition: IsEnviornmentNotProd
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/RDS.yaml
+      Parameters:
+        DBUser: !Ref 'DBUser'
+        DBName: !Ref 'DBInstanceName'
+        DBPassword: !Ref 'DBPassword'
+        Environment: !Ref 'Environment'
+        VPCID: !GetAtt 'VPC.Outputs.VPC'
+        DBAllocatedStorage: !Ref 'DBAllocatedStorage'
+        DBInstanceClass: !Ref 'DBInstanceClass'
+        MultiAZ: !Ref 'MultiAZ'
+        PrivateSubnets: !GetAtt 'VPC.Outputs.PrivateSubnets'
+        EC2SecurityGroup: !GetAtt DefultServerSG.Outputs.EC2SecurityGroupID
+
+  RDSProd:
+    Type: AWS::CloudFormation::Stack
+    Condition: IsEnviornmentProd
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/RDS.yaml
+      Parameters:
+        DBName: !Ref 'DBInstanceName'
+        DBUser: !Ref 'DBUser'
+        DBPassword: !Ref 'DBPassword'
+        Environment: !Ref 'Environment'
+        VPCID: !GetAtt 'VPC.Outputs.VPC'
+        DBAllocatedStorage: !Ref 'DBAllocatedStorage'
+        DBInstanceClass: !Ref 'DBInstanceClass'
+        MultiAZ: !Ref 'MultiAZ'
+        PrivateSubnets: !GetAtt 'VPC.Outputs.ProdPrivateSubnets'
+        EC2SecurityGroup: !GetAtt DefultServerSG.Outputs.EC2SecurityGroupID
+
+  SQS:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/sqs.yaml
+      Parameters:
+        QueueType: !Ref 'QueueType'
+        QueueName: !Ref 'QueueName'
+
+  StaticBucket:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/staticbucket.yaml
+      Parameters:
+        BucketName: !Ref 'BucketName'
+
+  # CDN:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/CDN.yaml
+  #     Parameters:
+  #       ALBDNS: !GetAtt ALB.Outputs.AlbDNS
+  #       StaticBucket: !GetAtt StaticBucket.Outputs.BucketName
+  #       DomainName: !Ref 'DomainName'
+  #       BucketDNS: !GetAtt StaticBucket.Outputs.BucketDNS
+
+
+#  Bastion:
+#    Type: AWS::CloudFormation::Stack
+#    Properties:
+#      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/Bastion.yaml
+#      Parameters:
+#        VPCID: !GetAtt VPC.Outputs.VPC
+#        Environment: !Ref 'Environment'
+#        PublicSubnet1: !GetAtt VPC.Outputs.PublicSubnet1
+#        KeyName: !Ref 'KeyName'
+#        BastionAMI: !Ref 'BastionAMI'
+
+
+#WebServerTargetGroup
+  TargetGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/TargetGroup.yaml
+      Parameters:
+        TargetGroupName: !Sub ${Environment}-TargetGroup
+        VPCID: !GetAtt 'VPC.Outputs.VPC'
+
+  WebServers:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/AutoscalingGroup.yaml
+      Parameters:
+        ImageID: !Ref 'ImageID'
+        KeyName: !Ref 'KeyName'
+        Environment: !Ref 'Environment'
+        PrivateSubnets: !GetAtt 'VPC.Outputs.PrivateSubnets'
+        EC2SecurityGroup: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
+        ASGName: !Sub ${Environment}-WebServer-ASG
+        TargetGroupARN: !GetAtt 'TargetGroup.Outputs.TargetGroupARN'
+        InstanceType: !Ref 'ServerInstanceType'
+        AppName: !Ref 'AppName'
+        DesiredCapacity: !Ref 'WebServerDesiredCapacity'
+        MaxSize: !Ref 'WebServerMax'
+        HealthCheckType: !Ref 'HealthCheckType'
+        LcName: !Ref 'WebLcName'
+
+#Mq Servers
+  MqTargetGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/TargetGroup.yaml
+      Parameters:
+        TargetGroupName: !Sub ${Environment}-${MqAppName}-TargetGroup
+        VPCID: !GetAtt 'VPC.Outputs.VPC'
+        Port: !Ref 'MqPort'
+        AppName: !Ref 'MqAppName'
+
+
+  MqServers:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      # TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/AutoscalingLaunchConfiguration.yaml
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/PublicAutoscalingGroup.yaml
+      Parameters:
+        ImageID: !Ref 'MqServerImageID'
+        InstanceType: !Ref 'MqServerInstanceType'
+        KeyName: !Ref 'KeyName'
+        Environment: !Ref 'Environment'
+        # PrivateSubnets: !GetAtt 'VPC.Outputs.PrivateSubnets'
+        PublicSubnets: !GetAtt 'VPC.Outputs.PublicSubnets'
+        EC2SecurityGroup: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
+        ASGName: !Sub ${Environment}-MqServer-ASG
+        TargetGroupARN: !GetAtt 'MqTargetGroup.Outputs.TargetGroupARN'
+        AppName: !Ref 'MqAppName'
+        MaxSize: !Ref 'MqMaxSize'
+        DesiredCapacity: !Ref 'MqServerDesiredCapacity'
+        HealthCheckType: !Ref 'HealthCheckType'
+        LcName: !Ref 'MqLcName'
+
+  ElastiCache:
+    Type: AWS::CloudFormation::Stack
+    Condition: IsEnviornmentProd
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/Elasticache.yaml
+      Parameters:
+        AZMode: !Ref 'AZMode'
+        VPCID: !GetAtt 'VPC.Outputs.VPC'
+        CacheNodeType: !Ref 'CacheNodeType'
+        PrivateSubnets: !GetAtt 'VPC.Outputs.ProdPrivateSubnets'
+        ClusterName: !Ref 'ClusterName'
+        Engine: !Ref 'Engine'
+        NumCacheNodes: !Ref 'NumCacheNodes'
+        EC2SecurityGroupID: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
+        Port: !Ref 'Port'
+
+  ElastiCacheDevStage:
+    Type: AWS::CloudFormation::Stack
+    Condition: IsEnviornmentNotProd
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/Elasticache.yaml
+      Parameters:
+        AZMode: !Ref 'AZMode'
+        VPCID: !GetAtt 'VPC.Outputs.VPC'
+        CacheNodeType: !Ref 'CacheNodeType'
+        PrivateSubnets: !GetAtt 'VPC.Outputs.PrivateSubnets'
+        ClusterName: !Ref 'ClusterName'
+        Engine: !Ref 'Engine'
+        NumCacheNodes: !Ref 'NumCacheNodes'
+        EC2SecurityGroupID: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
+        Port: !Ref 'Port'
+
+#Target Groups
+
+#Consumer Target Group
+  ConsumerTargetGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/TargetGroup.yaml
+      Parameters:
+        TargetGroupName: !Sub ${Environment}-Consumer-TargetGroup
+        VPCID: !GetAtt 'VPC.Outputs.VPC'
+        Port: !Ref 'ConsumerPort'
+        AppName: !Ref 'ConsumerAppName'
+
+  ConsumerServers:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/AutoscalingGroup.yaml
+      Parameters:
+        ImageID: !Ref 'ConsumerImageID'
+        KeyName: !Ref 'KeyName'
+        Environment: !Ref 'Environment'
+        PrivateSubnets: !GetAtt 'VPC.Outputs.PrivateSubnets'
+        # PublicSubnets: !GetAtt 'VPC.Outputs.PublicSubnets'
+        EC2SecurityGroup: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
+        ASGName: !Sub ${Environment}-Consumer-ASG
+        TargetGroupARN: !GetAtt 'ConsumerTargetGroup.Outputs.TargetGroupARN'
+        InstanceType: !Ref 'ConsumerServerInstanceType'
+        AppName: !Ref 'ConsumerAppName'
+        MaxSize: !Ref 'ConsumerMaxSize'
+        DesiredCapacity: !Ref 'ConsumerServerDesiredCapacity'
+        HealthCheckType: !Ref 'HealthCheckType'
+        LcName: !Ref 'ConsumerLcName'
+
+# Tracker Servers
+
+  TrackerTargetGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/TargetGroup.yaml
+      Parameters:
+        TargetGroupName: !Sub ${Environment}-Tracker-TargetGroup
+        VPCID: !GetAtt 'VPC.Outputs.VPC'
+        AppName: !Ref 'TrackerAppName'
+        Port: !Ref 'TrackerPort'
+
+  TrackerServers:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      # TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/AutoscalingLaunchConfiguration.yaml
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/PublicAutoscalingGroup.yaml
+      Parameters:
+        ImageID: !Ref 'TrackerImageID'
+        KeyName: !Ref 'KeyName'
+        Environment: !Ref 'Environment'
+        PublicSubnets: !GetAtt 'VPC.Outputs.PublicSubnets'
+        # PrivateSubnets: !GetAtt 'VPC.Outputs.PrivateSubnets'
+        EC2SecurityGroup: !GetAtt 'DefultServerSG.Outputs.EC2SecurityGroupID'
+        ASGName: !Sub ${Environment}-Tracker-ASG
+        TargetGroupARN: !GetAtt 'TrackerTargetGroup.Outputs.TargetGroupARN'
+        InstanceType: !Ref 'TrackerServerInstanceType'
+        AppName: !Ref 'TrackerAppName'
+        DesiredCapacity: !Ref 'TrackerServerDesiredCapacity'
+        MaxSize: !Ref 'TrackerMaxSize'
+        HealthCheckType: !Ref 'HealthCheckType'
+
+#websocket target group
+  WebSocketTargetGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://gritit-staging-cloudformation-bucket.s3-eu-west-1.amazonaws.com/TargetGroup.yaml
+      Parameters:
+        TargetGroupName: !Sub ${Environment}-WebSocket-TargetGroup
+        VPCID: !GetAtt 'VPC.Outputs.VPC'
+        AppName: WebSocket
+        Port: !Ref 'ConsumerPort'

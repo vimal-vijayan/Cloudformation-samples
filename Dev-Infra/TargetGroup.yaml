@@ -4,7 +4,7 @@ Parameters:
   HealthCheckPath:
     Description: Health check path
     Type: String
-    Default: /
+    Default: /index.html
   HealthCheckPort:
     Type: String
     Description: health check port
@@ -21,6 +21,10 @@ Parameters:
   VPCID:
     Description: VPC ID
     Type: "AWS::EC2::VPC::Id"
+  AppName:
+    Description: Enter The AppName
+    Type: String
+    Default: Sample
 
 Resources:
 
@@ -38,7 +42,7 @@ Resources:
       Protocol: HTTP
       Tags:
         - Key: Name
-          Value: !Sub ${Environment}-TargetGroup
+          Value: !Sub ${Environment}-${AppName}-TargetGroup
       TargetGroupAttributes:
         - Key: stickiness.enabled
           Value: false

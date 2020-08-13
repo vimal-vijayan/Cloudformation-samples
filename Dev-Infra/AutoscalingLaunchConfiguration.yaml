@@ -13,6 +13,8 @@ Parameters:
       - t2.micro
       - m4.large
       - m4.xlarge
+      - c5.large
+      - c5.xlarge
   KeyName:
     Type: String
     Default: apachekey
@@ -22,6 +24,7 @@ Parameters:
     AllowedValues:
       - Dev
       - Stage
+      - Preprod
       - Prod
   PrivateSubnets:
     Type: List<AWS::EC2::Subnet::Id>

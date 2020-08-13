@@ -1,0 +1,62 @@
+<VirtualHost *:80>
+
+#       ServerAdmin webmaster@localhost
+        ServerName gritit-backend-dev.qburst.build
+        DocumentRoot /home/grititdev/gritit_dev/backend/web
+      #  Redirect permanent / https://gritit-backend-dev.qburst.build/
+       RewriteEngine On
+       RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R=301,L]
+
+        # Available loglevels: trace8, ..., trace1, debug, info, notice, warn,
+        # error, crit, alert, emerg.
+        # It is also possible to configure the loglevel for particular
+        # modules, e.g.
+        #LogLevel info ssl:warn
+
+        ErrorLog ${APACHE_LOG_DIR}/error.log
+        CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+
+        <Directory "/home/grititdev/gritit_dev/">
+                Options Indexes FollowSymLinks Includes ExecCGI
+                AllowOverride All
+                Order allow,deny
+                Allow from all
+                Require all granted
+        </Directory>
+
+</VirtualHost>
+
+#<VirtualHost *:443>
+#ServerAdmin webmaster@localhost
+#ServerName gritit-backend-dev.qburst.build
+#DocumentRoot /home/grititdev/gritit_dev/backend/web
+#ErrorLog ${APACHE_LOG_DIR}/error.log
+
+#SSLEngine on
+#SSLEngine off
+#SSLCertificateFile /etc/ssl/gritit-backend-dev.qburst.build/certificate.crt
+#SSLCertificateKeyFile /etc/ssl/private/gritit-backend-dev.qburst.build/private.key
+#SSLCertificateChainFile /etc/ssl/gritit-backend-dev.qburst.build/ca_bundle.crt
+
+#<Directory "/home/grititdev/gritit_dev/">
+#                Options Indexes FollowSymLinks Includes ExecCGI
+#                AllowOverride All
+#                Order allow,deny
+#                Allow from all
+#                Require all granted
+#        </Directory>
+
+#Added By Vimal - 24/06/2020
+
+  #RewriteEngine On
+  #RewriteCond %{REQUEST_URI}  ^/socket.io            [NC]I
+  #RewriteCond %{QUERY_STRING} transport=websocket    [NC]
+  #RewriteRule /(.*)           ws://localhost:8101/$1 [P,L]
+
+  #ProxyPass / http://localhost:8101/
+  #ProxyPassReverse / http://localhost:8101/
+
+#</VirtualHost>
+
+# vim: syntax=apache ts=4 sw=4 sts=4 sr noet

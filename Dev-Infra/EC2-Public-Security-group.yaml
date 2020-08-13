@@ -1,0 +1,69 @@
+Description: Default Securit group for Server
+
+Parameters:
+  Environment:
+    Type: String
+  VPCID:
+    Type: 'AWS::EC2::VPC::Id'
+  ALBSGID:
+    Type: String
+  VpcCidr:
+    Type: String
+  PublicSubnet1Cidr:
+    Type: String
+  PublicSubnet2Cidr:
+    Type: String
+
+
+Resources:
+  PublicServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: bastion Security group
+      GroupName: !Sub ${Environment}-Public-APP-SG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: !Ref 'VpcCidr'
+          FromPort: 27017
+          ToPort: 27017
+          Description: VPC CIDR
+      VpcId: !Ref 'VPCID'
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-Public-APP-SG
+
+  WebSocketIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'PublicServerSecurityGroup'
+      IpProtocol: tcp
+      Description: !Sub ${Environment}-ALB
+      FromPort: 8101
+      ToPort: 8101
+      SourceSecurityGroupId: !Ref 'ALBSGID'
+  MQIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'PublicServerSecurityGroup'
+      IpProtocol: tcp
+      Description: "Open For Internet"
+      FromPort: 5560
+      ToPort: 5560
+      CidrIp: 0.0.0.0/0
+  TrackerIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'PublicServerSecurityGroup'
+      IpProtocol: tcp
+      Description: "Open For Internet"
+      FromPort: 5563
+      ToPort: 5563
+      CidrIp: 0.0.0.0/0
+
+Outputs:
+  PublicEC2SecurityGroupName:
+    Description: Ec2 Default Securit Group Name
+    Value: !Ref 'PublicServerSecurityGroup'
+  PublicEC2SecurityGroupID:
+    Description: EC2 Default security group ID
+    Value: !GetAtt 'PublicServerSecurityGroup.GroupId'

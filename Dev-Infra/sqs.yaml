@@ -30,9 +30,5 @@ Resources:
 Outputs:
   QueueName:
     Value: !Ref 'QueueName'
-    Export:
-      Name: QueueName
   QueueArn:
     Value: !GetAtt 'SQS.Arn'
-    Export:
-      Name: QueueArn

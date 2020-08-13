@@ -33,6 +33,7 @@ Parameters:
     AllowedValues:
       - Dev
       - Stage
+      - Preprod
       - Prod
   Project:
     Type: String
@@ -290,26 +291,18 @@ Outputs:
   AwsAccountID:
     Description: The aws account ID
     Value: !Ref "AWS::AccountId"
-    Export:
-      Name: AWS-Account-ID
 
   ProjectName:
     Description: Project Name
     Value: !Ref "Project"
-    Export:
-      Name: Project
 
   AwsRegion:
     Description: The aws account ID
     Value: !Ref "AWS::Region"
-    Export:
-      Name: AWSRegion
 
   StackName:
     Description: The Stack Name
     Value: !Ref "AWS::StackName"
-    Export:
-      Name: StackName
 
 
   #stack components Details

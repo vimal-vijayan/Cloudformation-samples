@@ -7,6 +7,7 @@ Parameters:
     Default: ami-032407d0fa1966bf5
   InstanceType:
     Type: String
+    Default: t2.micro
     AllowedValues:
       - t3.small
       - t3.medium
@@ -16,8 +17,8 @@ Parameters:
       - m4.large
       - m4.xlarge
       - m5.large
-      - c5.large
       - c5.xlarge
+      - c5.large
   KeyName:
     Type: String
     Default: apachekey
@@ -29,7 +30,7 @@ Parameters:
       - Stage
       - Preprod
       - Prod
-  PrivateSubnets:
+  PublicSubnets:
     Type: List<AWS::EC2::Subnet::Id>
   EC2SecurityGroup:
     Type: AWS::EC2::SecurityGroup::Id
@@ -56,13 +57,13 @@ Parameters:
     Description: Enter the application Name
   LcName:
     Type: String
-    Description: Enter the LaunchConfiguration Name
+    Description: Enter LaunchConfiguration name
 
 Resources:
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      AssociatePublicIpAddress: false
+      AssociatePublicIpAddress: true
       # BlockDeviceMappings:
       #   - BlockDeviceMapping
       EbsOptimized: false
@@ -83,7 +84,7 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       AutoScalingGroupName: !Ref 'ASGName'
-      VPCZoneIdentifier: !Ref 'PrivateSubnets'
+      VPCZoneIdentifier: !Ref 'PublicSubnets'
       # AvailabilityZones:
       #   - !GetAZs ''
       Cooldown: 60

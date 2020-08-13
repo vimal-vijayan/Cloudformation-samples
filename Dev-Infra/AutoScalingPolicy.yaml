@@ -13,7 +13,7 @@ Resources:
       AdjustmentType: ChangeInCapacity
       AutoScalingGroupName: !Ref 'ASGName'
       Cooldown: 30
-      EstimatedInstanceWarmup: 20
+      EstimatedInstanceWarmup: 15
       # MetricAggregationType: Average
       # MinAdjustmentMagnitude: Integer
       PolicyType: TargetTrackingScaling
@@ -23,7 +23,7 @@ Resources:
       TargetTrackingConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ASGAverageCPUUtilization
-        TargetValue: 90
+        TargetValue: 75
 
   RequestCountPerTargetScale:
     Type: AWS::AutoScaling::ScalingPolicy

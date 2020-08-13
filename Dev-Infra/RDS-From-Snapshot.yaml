@@ -42,6 +42,8 @@ Parameters:
       - db.t1.micro
       - db.m1.small
       - db.t2.small
+      - db.t2.medium
+      - db.t3.medium
     # ConstraintDescription: must select a valid database instance type.
   EC2SecurityGroup:
     Description: The EC2 security group that contains instances that need access to the database
@@ -58,6 +60,7 @@ Parameters:
     AllowedValues:
       - Dev
       - Stage
+      - Preprod
       - Prod
 
   MultiAZ:
@@ -123,6 +126,7 @@ Resources:
       AllocatedStorage: !Ref 'DBAllocatedStorage'
       DBInstanceClass: !Ref 'DBInstanceClass'
       BackupRetentionPeriod: 7
+      StorageEncrypted: true
       # DeletionProtection: true
       Engine: MySQL
       # EngineVersion: 5.1.42
@@ -137,19 +141,19 @@ Resources:
         - !GetAtt 'DBSecurityGroup.GroupId'
 
 
-  ReplicaDB:
-    Type: AWS::RDS::DBInstance
-    Properties:
-      DBInstanceIdentifier: !Sub ${Environment}-${DBName}-Reader
-      SourceDBInstanceIdentifier: !Ref 'MasterDB'
-      DBInstanceClass: !Ref 'DBInstanceClass'
-      #DBSubnetGroupName: !Ref 'DbSubnetGroup'
-      Tags:
-      - Key: Name
-        Value: Read Replica Database
-      # DBSecurityGroups: !Ref 'DBSecurityGroup'
-      VPCSecurityGroups:
-         - !GetAtt 'DBSecurityGroup.GroupId'
+  # ReplicaDB:
+  #   Type: AWS::RDS::DBInstance
+  #   Properties:
+  #     DBInstanceIdentifier: !Sub ${Environment}-${DBName}-Reader
+  #     SourceDBInstanceIdentifier: !Ref 'MasterDB'
+  #     DBInstanceClass: !Ref 'DBInstanceClass'
+  #     #DBSubnetGroupName: !Ref 'DbSubnetGroup'
+  #     Tags:
+  #     - Key: Name
+  #       Value: Read Replica Database
+  #     # DBSecurityGroups: !Ref 'DBSecurityGroup'
+  #     VPCSecurityGroups:
+  #        - !GetAtt 'DBSecurityGroup.GroupId'
 
 Outputs:
 
@@ -157,9 +161,9 @@ Outputs:
     Description: JDBC connection string for the master database
     Value: !Join ['', ['jdbc:mysql://', !GetAtt [MasterDB, Endpoint.Address], ':', !GetAtt [MasterDB, Endpoint.Port], /, !Ref 'DBName']]
 
-  ReplicaJDBCConnectionString:
-    Description: JDBC connection string for the replica database
-    Value: !Join ['', ['jdbc:mysql://', !GetAtt [ReplicaDB, Endpoint.Address], ':', !GetAtt [ReplicaDB, Endpoint.Port], /, !Ref 'DBName']]
+  # ReplicaJDBCConnectionString:
+  #   Description: JDBC connection string for the replica database
+  #   Value: !Join ['', ['jdbc:mysql://', !GetAtt [ReplicaDB, Endpoint.Address], ':', !GetAtt [ReplicaDB, Endpoint.Port], /, !Ref 'DBName']]
 
   DBSecurityGroup:
     Description: DB SecurityGroup

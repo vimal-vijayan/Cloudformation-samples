@@ -1,0 +1,118 @@
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+   monitor: 'codelab-monitor'
+   region: 'eu-west-1'
+   access_key:
+   secret_key:
+
+rule_files:
+  # - "first.rules"
+  # - "second.rules"
+
+scrape_configs:
+  - job_name: 'prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['localhost:9090']
+
+
+  - job_name: 'Prod-GS-nodes'
+    scrape_interval: 5s
+    ec2_sd_configs:
+      - port: 9100
+        filters:
+          - name: tag:Name
+            values:
+              - Prod-Gorillasafety-*
+
+  - job_name: 'Prod-TP-nodes'
+    scrape_interval: 5s
+    ec2_sd_configs:
+      - region: us-east-1
+        access_key:
+        secret_key:
+        port: 9100
+        filters:
+          - name: tag:Name
+            values:
+              - Prod-TruckerPath-*
+
+  - job_name: 'Prod-EM-nodes'
+    scrape_interval: 5s
+    ec2_sd_configs:
+      - region: us-east-1
+        access_key:
+        secret_key:
+        port: 9100
+        filters:
+          - name: tag:Name
+            values:
+              - Prod-EldMandate-*
+
+  - job_name: 'Prod-TO-nodes'
+    scrape_interval: 5s
+    ec2_sd_configs:
+      - region: us-east-1
+        access_key:
+        secret_key:
+        port: 9100
+        filters:
+          - name: tag:Name
+            values:
+              - Prod-Trackon*
+
+  - job_name: 'Prod-SP-nodes'
+    scrape_interval: 5s
+    ec2_sd_configs:
+      - region: us-east-1
+        access_key:
+        secret_key:
+        port: 9100
+        filters:
+          - name: tag:Name
+            values:
+              - Prod-Spireon*
+
+  - job_name: 'Prod-MA-nodes'
+    scrape_interval: 5s
+    ec2_sd_configs:
+      - region: us-east-1
+        access_key:
+        secret_key:
+        port: 9100
+        filters:
+          - name: tag:Name
+            values:
+              - Prod-MapAnything*
+
+  - job_name: 'Prod-Cron-Nodes'
+    scrape_interval: 5s
+    ec2_sd_configs:
+      - region: us-east-1
+        access_key:
+        secret_key:
+        port: 9100
+        filters:
+          - name: tag:Name
+            values:
+              - Prod-Sqs-Cron-*
+              - Prod-TM-Cron-*
+
+  - job_name: 'Prod-MobCPUAnalysis-Nodes'
+    scrape_interval: 5s
+    ec2_sd_configs:
+      - region: us-east-1
+        access_key:
+        secret_key: 
+        port: 9100
+        filters:
+          - name: tag:Name
+            values:
+              - Prod-MobCPUAnalysis*
+
+  - job_name: 'Production-source-copy-instance'
+    scrape_interval: 5s
+    static_configs:
+        - targets: ['192.168.20.119:9100']
