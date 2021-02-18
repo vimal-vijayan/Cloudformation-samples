@@ -4,16 +4,56 @@
 # https://aka.ms/yaml
 
 trigger:
-- main
+ branches:
+  include:
+    - master
+    - feature/*
+    - release/*
 
-pool:
-  vmImage: 'ubuntu-latest'
+variables:
+  MY_VAR: "Test"
+  DEV_ORG_LOGIN: "dev_org"
+  STAGR_ORG_LOGIN: "stage_org"
+  PROD_ORG_LOGIN: "prod_org"
+  REGION: "us"
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
-
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+stages:
+- stage: BuildStage
+  displayName: Build Stage
+  jobs:
+  - job: Package
+    displayName: IICS Package
+    timeoutInMinutes: 10
+    workspace: 
+      clean: all
+    steps:
+    - script: echo "IICS package command"
+      #iics package -z file.zip -w 
+- stage: Devdeploymentjob
+  displayName: Dev Deployment
+  jobs:
+  - job: Import
+    displayName: Import
+    steps:
+    - script: echo "IICS import command"
+    #iics import --region $(region) --username $(username) --password $(password) --zipFilePath file.zip
+  - deployment:
+    displayName: Dev Deployment Job
+    environment: Dev
+    strategy:
+     runOnce:
+       deploy:
+         steps:
+           - bash: echo "This is a Dev deployment job $(MY_VAR)" 
+- stage: StageDeployment
+  displayName: Stage Deployment
+  jobs:
+    - deployment: 
+      displayName: Stage Deployment Job
+      continueOnError: false
+      environment: Stage
+      strategy:
+       runOnce:
+        deploy:
+          steps:
+            - bash: echo "This is a Stage Deployment job"
